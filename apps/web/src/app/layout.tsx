@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { TRPCProvider } from "@/utils/trpc";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -21,7 +22,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} dark`}>
       <body className={`${inter.className} antialiased bg-gray-950 text-gray-100`}>
-        {children}
+        <TRPCProvider>
+          {children}
+        </TRPCProvider>
       </body>
     </html>
   );
