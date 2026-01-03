@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { trpc } from '@/utils/trpc';
 import { useAppStore } from '@/stores/app-store';
 import { cn } from '@/lib/utils';
 import {
@@ -17,6 +18,7 @@ import {
     Network,
     PanelLeftClose,
     PanelLeft,
+    Loader2,
 } from 'lucide-react';
 import type { Page } from '@/types';
 
@@ -70,7 +72,7 @@ function PageItem({ page, level = 0, onSelect, selectedId }: PageItemProps) {
                     {page.children?.map((child) => (
                         <PageItem
                             key={child.id}
-                            page={child}
+                            page={child as Page}
                             level={level + 1}
                             onSelect={onSelect}
                             selectedId={selectedId}
@@ -83,15 +85,74 @@ function PageItem({ page, level = 0, onSelect, selectedId }: PageItemProps) {
 }
 
 export function Sidebar() {
-    const { pages, currentPage, setCurrentPage, isSidebarOpen, toggleSidebar, setSearchOpen } = useAppStore();
+    const {
+        currentPage,
+        setCurrentPage,
+        isSidebarOpen,
+        toggleSidebar,
+        setSearchOpen,
+        setCurrentWorkspace,
+        setPages,
+        pages,
+    } = useAppStore();
 
-    // Build page tree from flat list
-    const rootPages = pages.filter((p) => !p.parentId);
+    // Fetch default workspace
+    const workspaceQuery = trpc.workspace.getDefault.useQuery(undefined, {
+        staleTime: Infinity,
+    });
+
+    // Get workspace ID for dependent queries
+    const workspaceId = workspaceQuery.data?.id;
+
+    // Fetch pages for workspace - only when we have a workspace ID
+    const pagesQuery = trpc.page.list.useQuery(
+        { workspaceId: workspaceId! },
+        {
+            enabled: !!workspaceId,
+            staleTime: 5000,
+        }
+    );
+
+    // Create page mutation
+    const createPageMutation = trpc.page.create.useMutation({
+        onSuccess: (newPage) => {
+            pagesQuery.refetch();
+            setCurrentPage(newPage as Page);
+        },
+    });
+
+    // Update store when workspace changes
+    useEffect(() => {
+        if (workspaceQuery.data) {
+            setCurrentWorkspace(workspaceQuery.data);
+        }
+    }, [workspaceQuery.data, setCurrentWorkspace]);
+
+    // Update store when pages change
+    useEffect(() => {
+        if (pagesQuery.data) {
+            setPages(pagesQuery.data as Page[]);
+        }
+    }, [pagesQuery.data, setPages]);
+
+    // Build page tree from store
+    const rootPages = useMemo(() =>
+        pages.filter((p) => !p.parentId),
+        [pages]
+    );
 
     const handleNewPage = () => {
-        // TODO: Implement page creation via API
-        console.log('Create new page');
+        if (workspaceId) {
+            createPageMutation.mutate({
+                workspaceId,
+                title: 'Untitled',
+                icon: '📄',
+            });
+        }
     };
+
+    // Determine loading state
+    const isLoading = workspaceQuery.isLoading || (!!workspaceId && pagesQuery.isLoading);
 
     if (!isSidebarOpen) {
         return (
@@ -132,7 +193,10 @@ export function Sidebar() {
                     <span>Search</span>
                     <span className="ml-auto text-xs text-gray-400">⌘K</span>
                 </button>
-                <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                <button
+                    onClick={() => setCurrentPage(null)}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
                     <Home className="w-4 h-4" />
                     <span>Home</span>
                 </button>
@@ -154,19 +218,29 @@ export function Sidebar() {
                     </span>
                     <button
                         onClick={handleNewPage}
-                        className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                        disabled={createPageMutation.isLoading || !workspaceId}
+                        className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
                     >
-                        <Plus className="w-3 h-3" />
+                        {createPageMutation.isLoading ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                            <Plus className="w-3 h-3" />
+                        )}
                     </button>
                 </div>
 
-                {rootPages.length === 0 ? (
+                {isLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                    </div>
+                ) : rootPages.length === 0 ? (
                     <div className="px-2 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                         <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
                         <p>No pages yet</p>
                         <button
                             onClick={handleNewPage}
-                            className="mt-2 text-blue-500 hover:text-blue-600"
+                            disabled={createPageMutation.isLoading || !workspaceId}
+                            className="mt-2 text-blue-500 hover:text-blue-600 disabled:opacity-50"
                         >
                             Create your first page
                         </button>

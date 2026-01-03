@@ -1,230 +1,229 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import * as echarts from 'echarts';
-import type { EChartsOption, ECharts } from 'echarts';
+import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
+// Dynamic import for echarts to avoid SSR issues
+let echarts: any = null;
+
+interface ChartData {
+    xAxis?: string[];
+    series?: Array<{ name?: string; data: number[] }> | Array<{ name: string; value: number }>;
+}
+
 interface ChartProps {
-    option: EChartsOption;
+    type: 'line' | 'bar' | 'pie' | 'gauge' | 'radar' | 'scatter';
+    data: ChartData;
     className?: string;
-    style?: React.CSSProperties;
-    theme?: 'light' | 'dark';
+    height?: number;
     loading?: boolean;
-    onChartReady?: (chart: ECharts) => void;
 }
 
 export function Chart({
-    option,
+    type,
+    data,
     className,
-    style,
-    theme = 'dark',
+    height = 300,
     loading = false,
-    onChartReady,
 }: ChartProps) {
     const chartRef = useRef<HTMLDivElement>(null);
-    const chartInstance = useRef<ECharts | null>(null);
+    const chartInstance = useRef<any>(null);
+    const [isClient, setIsClient] = useState(false);
 
+    // Only run on client
     useEffect(() => {
-        if (!chartRef.current) return;
+        setIsClient(true);
+        // Dynamic import echarts
+        import('echarts').then((mod) => {
+            echarts = mod;
+        });
+    }, []);
 
-        // Initialize chart
-        chartInstance.current = echarts.init(chartRef.current, theme);
+    // Initialize chart
+    useEffect(() => {
+        if (!isClient || !chartRef.current || !echarts) return;
 
-        if (onChartReady) {
-            onChartReady(chartInstance.current);
+        // Wait a bit for echarts to be fully loaded
+        const timer = setTimeout(() => {
+            if (!chartRef.current || chartInstance.current) return;
+
+            try {
+                chartInstance.current = echarts.init(chartRef.current, 'dark');
+                updateChart();
+            } catch (e) {
+                console.error('Failed to init chart:', e);
+            }
+        }, 100);
+
+        return () => {
+            clearTimeout(timer);
+            if (chartInstance.current) {
+                try {
+                    chartInstance.current.dispose();
+                } catch (e) { }
+                chartInstance.current = null;
+            }
+        };
+    }, [isClient]);
+
+    // Update chart when data changes
+    useEffect(() => {
+        if (chartInstance.current && echarts) {
+            updateChart();
         }
+    }, [data, type]);
 
-        // Handle resize
+    const updateChart = () => {
+        if (!chartInstance.current) return;
+
+        try {
+            const option = buildOption();
+            if (option) {
+                chartInstance.current.setOption(option, true);
+            }
+        } catch (e) {
+            console.error('Failed to update chart:', e);
+        }
+    };
+
+    const buildOption = () => {
+        const baseOption = {
+            backgroundColor: 'transparent',
+            textStyle: { color: '#9ca3af' },
+            tooltip: { trigger: type === 'pie' ? 'item' : 'axis' },
+        };
+
+        switch (type) {
+            case 'line':
+            case 'bar':
+                return {
+                    ...baseOption,
+                    grid: { left: '3%', right: '4%', bottom: '3%', top: '10%', containLabel: true },
+                    xAxis: {
+                        type: 'category',
+                        data: data.xAxis || [],
+                        axisLine: { lineStyle: { color: '#374151' } },
+                        axisLabel: { color: '#9ca3af' },
+                    },
+                    yAxis: {
+                        type: 'value',
+                        axisLine: { lineStyle: { color: '#374151' } },
+                        splitLine: { lineStyle: { color: '#374151', type: 'dashed' } },
+                        axisLabel: { color: '#9ca3af' },
+                    },
+                    series: Array.isArray(data.series) ? data.series.map((s: any, i: number) => ({
+                        name: s.name || `Series ${i + 1}`,
+                        type: type,
+                        data: s.data || [],
+                        smooth: type === 'line',
+                        areaStyle: type === 'line' ? { opacity: 0.1 } : undefined,
+                        itemStyle: {
+                            color: i === 0 ? '#6366f1' : '#8b5cf6',
+                            borderRadius: type === 'bar' ? [4, 4, 0, 0] : undefined,
+                        },
+                    })) : [],
+                };
+
+            case 'pie':
+                return {
+                    ...baseOption,
+                    legend: {
+                        orient: 'vertical',
+                        left: 'left',
+                        textStyle: { color: '#9ca3af' },
+                    },
+                    series: [{
+                        type: 'pie',
+                        radius: ['40%', '70%'],
+                        center: ['60%', '50%'],
+                        avoidLabelOverlap: false,
+                        itemStyle: {
+                            borderRadius: 8,
+                            borderColor: '#111827',
+                            borderWidth: 2
+                        },
+                        label: { show: false },
+                        emphasis: {
+                            label: { show: true, fontSize: 16, fontWeight: 'bold' }
+                        },
+                        data: Array.isArray(data.series) ? data.series : [],
+                    }],
+                    color: ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe'],
+                };
+
+            default:
+                return baseOption;
+        }
+    };
+
+    // Handle resize
+    useEffect(() => {
         const handleResize = () => {
-            chartInstance.current?.resize();
+            if (chartInstance.current) {
+                chartInstance.current.resize();
+            }
         };
         window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
-        // Cleanup
-        return () => {
-            window.removeEventListener('resize', handleResize);
-            chartInstance.current?.dispose();
-        };
-    }, [theme, onChartReady]);
-
-    // Update options
-    useEffect(() => {
-        if (chartInstance.current) {
-            chartInstance.current.setOption(option, true);
-        }
-    }, [option]);
-
-    // Handle loading state
-    useEffect(() => {
-        if (chartInstance.current) {
-            if (loading) {
-                chartInstance.current.showLoading('default', {
-                    text: 'Loading...',
-                    color: '#6366f1',
-                    maskColor: 'rgba(0, 0, 0, 0.1)',
-                });
-            } else {
-                chartInstance.current.hideLoading();
-            }
-        }
-    }, [loading]);
+    if (!isClient) {
+        return (
+            <div
+                className={cn('flex items-center justify-center bg-gray-800/50 rounded-lg', className)}
+                style={{ height }}
+            >
+                <div className="text-gray-500">Loading chart...</div>
+            </div>
+        );
+    }
 
     return (
         <div
             ref={chartRef}
-            className={cn('w-full h-full min-h-[300px]', className)}
-            style={style}
+            className={cn('w-full', className)}
+            style={{ height }}
         />
     );
 }
 
-// Pre-built chart configurations
-export const chartPresets = {
-    line: (data: { x: string[]; y: number[]; name?: string }): EChartsOption => ({
-        tooltip: { trigger: 'axis' },
-        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-        xAxis: { type: 'category', data: data.x, boundaryGap: false },
-        yAxis: { type: 'value' },
-        series: [{
-            name: data.name || 'Value',
-            type: 'line',
-            data: data.y,
-            smooth: true,
-            areaStyle: {
-                opacity: 0.3,
-                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                    { offset: 0, color: 'rgba(99, 102, 241, 0.5)' },
-                    { offset: 1, color: 'rgba(99, 102, 241, 0.05)' }
-                ])
-            },
-            lineStyle: { width: 3, color: '#6366f1' },
-            itemStyle: { color: '#6366f1' },
-        }],
-    }),
+// Stat components
+interface StatCardProps {
+    title: string;
+    value: string;
+    icon?: React.ReactNode;
+    change?: number;
+    trend?: 'up' | 'down' | 'neutral';
+}
 
-    bar: (data: { categories: string[]; values: number[]; name?: string }): EChartsOption => ({
-        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-        xAxis: { type: 'category', data: data.categories },
-        yAxis: { type: 'value' },
-        series: [{
-            name: data.name || 'Value',
-            type: 'bar',
-            data: data.values,
-            itemStyle: {
-                borderRadius: [4, 4, 0, 0],
-                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                    { offset: 0, color: '#6366f1' },
-                    { offset: 1, color: '#8b5cf6' }
-                ])
-            },
-        }],
-    }),
+export function StatCard({ title, value, icon, change, trend }: StatCardProps) {
+    return (
+        <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+            <div className="flex items-center justify-between mb-4">
+                <span className="text-gray-400 text-sm">{title}</span>
+                {icon && <div className="text-gray-500">{icon}</div>}
+            </div>
+            <div className="text-3xl font-bold text-white mb-2">{value}</div>
+            {change !== undefined && (
+                <div className={cn(
+                    'text-sm flex items-center gap-1',
+                    trend === 'up' && 'text-green-500',
+                    trend === 'down' && 'text-red-500',
+                    trend === 'neutral' && 'text-gray-500'
+                )}>
+                    {trend === 'up' && '↑'}
+                    {trend === 'down' && '↓'}
+                    {change}% from last week
+                </div>
+            )}
+        </div>
+    );
+}
 
-    pie: (data: { name: string; value: number }[]): EChartsOption => ({
-        tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-        legend: { orient: 'vertical', left: 'left' },
-        series: [{
-            type: 'pie',
-            radius: ['40%', '70%'],
-            avoidLabelOverlap: false,
-            itemStyle: { borderRadius: 10, borderColor: '#1f2937', borderWidth: 2 },
-            label: { show: false, position: 'center' },
-            emphasis: {
-                label: { show: true, fontSize: 20, fontWeight: 'bold' }
-            },
-            data: data,
-        }],
-    }),
-
-    gauge: (value: number, max: number = 100, name: string = 'Progress'): EChartsOption => ({
-        series: [{
-            type: 'gauge',
-            startAngle: 180,
-            endAngle: 0,
-            min: 0,
-            max: max,
-            splitNumber: 5,
-            axisLine: {
-                lineStyle: {
-                    width: 20,
-                    color: [
-                        [0.3, '#ef4444'],
-                        [0.7, '#f59e0b'],
-                        [1, '#22c55e']
-                    ]
-                }
-            },
-            pointer: { icon: 'path://M12.8,0.7l12,40.1H0.7L12.8,0.7z', length: '50%', width: 8 },
-            axisTick: { show: false },
-            splitLine: { show: false },
-            axisLabel: { show: false },
-            detail: {
-                fontSize: 24,
-                offsetCenter: [0, '60%'],
-                formatter: value.toString(),
-            },
-            title: {
-                offsetCenter: [0, '90%'],
-                fontSize: 14,
-            },
-            data: [{ value: value, name: name }]
-        }]
-    }),
-
-    radar: (data: { indicator: { name: string; max: number }[]; values: number[] }): EChartsOption => ({
-        radar: {
-            indicator: data.indicator,
-            shape: 'polygon',
-            splitNumber: 5,
-        },
-        series: [{
-            type: 'radar',
-            data: [{
-                value: data.values,
-                areaStyle: { opacity: 0.3 },
-            }],
-        }],
-    }),
-
-    heatmap: (data: { x: string[]; y: string[]; values: [number, number, number][] }): EChartsOption => ({
-        tooltip: { position: 'top' },
-        grid: { height: '50%', top: '10%' },
-        xAxis: { type: 'category', data: data.x, splitArea: { show: true } },
-        yAxis: { type: 'category', data: data.y, splitArea: { show: true } },
-        visualMap: {
-            min: 0,
-            max: 10,
-            calculable: true,
-            orient: 'horizontal',
-            left: 'center',
-            bottom: '15%',
-        },
-        series: [{
-            type: 'heatmap',
-            data: data.values,
-            emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0, 0, 0, 0.5)' } },
-        }],
-    }),
-
-    scatter: (data: [number, number][]): EChartsOption => ({
-        xAxis: {},
-        yAxis: {},
-        series: [{
-            type: 'scatter',
-            data: data,
-            symbolSize: 10,
-            itemStyle: { color: '#6366f1' },
-        }],
-    }),
-
-    treemap: (data: { name: string; value: number; children?: { name: string; value: number }[] }[]): EChartsOption => ({
-        series: [{
-            type: 'treemap',
-            data: data,
-            roam: false,
-            label: { show: true, formatter: '{b}' },
-        }],
-    }),
-};
+export function StatGrid({ children }: { children: React.ReactNode }) {
+    return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {children}
+        </div>
+    );
+}
