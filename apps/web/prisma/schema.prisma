@@ -1,0 +1,188 @@
+// Prisma Schema for NeoNotes
+// This defines the core data models for the notes system
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Workspace - top-level container for all content
+model Workspace {
+  id        String   @id @default(uuid())
+  name      String
+  icon      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  pages     Page[]
+}
+
+// Page - a document that can contain blocks and child pages
+model Page {
+  id          String   @id @default(uuid())
+  title       String   @default("Untitled")
+  icon        String?  // emoji or icon name
+  coverImage  String?  // URL to cover image
+  isArchived  Boolean  @default(false)
+  isFavorite  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Hierarchy
+  parentId    String?
+  parent      Page?    @relation("PageHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children    Page[]   @relation("PageHierarchy")
+  
+  // Workspace relation
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  // Content
+  blocks      Block[]
+  
+  // Inline databases on this page
+  databases   Database[]
+
+  @@index([workspaceId])
+  @@index([parentId])
+}
+
+// Block - a content unit within a page
+model Block {
+  id        String   @id @default(uuid())
+  type      String   // paragraph, heading1, heading2, heading3, bulletList, numberedList, todo, code, quote, callout, divider, image, table, database
+  content   Json     // TipTap JSON content
+  order     Int      // Position within parent
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Parent relations
+  pageId    String
+  page      Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  
+  // Nested blocks (for indentation)
+  parentBlockId String?
+  parentBlock   Block?  @relation("BlockHierarchy", fields: [parentBlockId], references: [id], onDelete: Cascade)
+  childBlocks   Block[] @relation("BlockHierarchy")
+  
+  @@index([pageId])
+  @@index([parentBlockId])
+  @@index([order])
+}
+
+// Database - inline database/table within a page
+model Database {
+  id          String   @id @default(uuid())
+  name        String   @default("Untitled Database")
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Parent page
+  pageId      String
+  page        Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  
+  // Schema and data
+  columns     DatabaseColumn[]
+  rows        DatabaseRow[]
+  views       DatabaseView[]
+
+  @@index([pageId])
+}
+
+// DatabaseColumn - defines a column in a database
+model DatabaseColumn {
+  id          String   @id @default(uuid())
+  name        String
+  type        String   // text, number, date, select, multiSelect, checkbox, url, email, phone, person, files, relation, rollup, formula
+  options     Json?    // For select/multiSelect: { options: [{ id, name, color }] }
+  order       Int
+  width       Int      @default(200)
+  isVisible   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  databaseId  String
+  database    Database @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+  
+  cells       DatabaseCell[]
+
+  @@index([databaseId])
+}
+
+// DatabaseRow - a row in a database
+model DatabaseRow {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  databaseId String
+  database   Database @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+  
+  cells      DatabaseCell[]
+
+  @@index([databaseId])
+}
+
+// DatabaseCell - intersection of row and column
+model DatabaseCell {
+  id        String   @id @default(uuid())
+  value     Json     // The actual cell value
+  
+  columnId  String
+  column    DatabaseColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  
+  rowId     String
+  row       DatabaseRow @relation(fields: [rowId], references: [id], onDelete: Cascade)
+
+  @@unique([columnId, rowId])
+  @@index([columnId])
+  @@index([rowId])
+}
+
+// DatabaseView - different view configurations for a database
+model DatabaseView {
+  id          String   @id @default(uuid())
+  name        String
+  type        String   // table, board, calendar, gallery, timeline, list
+  config      Json     // View-specific configuration (filters, sorts, grouping, kanban column, etc.)
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  databaseId  String
+  database    Database @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+
+  @@index([databaseId])
+}
+
+// Dashboard - collection of widgets for charts and visualization
+model Dashboard {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  layout      Json     // Grid layout configuration
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  widgets     DashboardWidget[]
+}
+
+// DashboardWidget - individual chart/visualization widget
+model DashboardWidget {
+  id          String   @id @default(uuid())
+  type        String   // chart, stat, recentPages, quickCapture
+  title       String?
+  config      Json     // Chart configuration, data source, etc.
+  position    Json     // { x, y, width, height } in grid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  dashboardId String
+  dashboard   Dashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+
+  @@index([dashboardId])
+}
