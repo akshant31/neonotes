@@ -19,6 +19,9 @@ import {
     BarChart2,
     LineChart,
     PieChart,
+    Columns2,
+    Columns3,
+    LayoutGrid,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { trpc } from '@/utils/trpc';
@@ -32,6 +35,7 @@ interface Command {
     description: string;
     icon: React.ReactNode;
     action: (editor: Editor) => void;
+    aliases?: string[]; // Added for shorthand searching like "h1", "ul", "ol"
 }
 
 
@@ -44,66 +48,86 @@ export function SlashCommands({ editor, pageId }: SlashCommandsProps & { pageId?
 
     const createDatabaseMutation = trpc.database.create.useMutation();
 
+    // Helper to create column structure
+    const createColumnsContent = (count: number) => ({
+        type: 'columns',
+        attrs: { columnCount: count },
+        content: Array.from({ length: count }, () => ({
+            type: 'column',
+            content: [{ type: 'paragraph' }]
+        }))
+    });
+
     const commands: Command[] = [
         {
             name: 'Text',
             description: 'Just start writing with plain text',
             icon: <Type className="w-5 h-5" />,
             action: (editor) => editor.chain().focus().setParagraph().run(),
+            aliases: ['p', 'paragraph', 'text'],
         },
         {
             name: 'Heading 1',
             description: 'Large section heading',
             icon: <Heading1 className="w-5 h-5" />,
             action: (editor) => editor.chain().focus().toggleHeading({ level: 1 }).run(),
+            aliases: ['h1', 'heading1', 'title'],
         },
         {
             name: 'Heading 2',
             description: 'Medium section heading',
             icon: <Heading2 className="w-5 h-5" />,
             action: (editor) => editor.chain().focus().toggleHeading({ level: 2 }).run(),
+            aliases: ['h2', 'heading2', 'subtitle'],
         },
         {
             name: 'Heading 3',
             description: 'Small section heading',
             icon: <Heading3 className="w-5 h-5" />,
             action: (editor) => editor.chain().focus().toggleHeading({ level: 3 }).run(),
+            aliases: ['h3', 'heading3'],
         },
         {
             name: 'Bullet List',
             description: 'Create a simple bullet list',
             icon: <List className="w-5 h-5" />,
             action: (editor) => editor.chain().focus().toggleBulletList().run(),
+            aliases: ['ul', 'bullets', 'unordered'],
         },
         {
             name: 'Numbered List',
             description: 'Create a numbered list',
             icon: <ListOrdered className="w-5 h-5" />,
             action: (editor) => editor.chain().focus().toggleOrderedList().run(),
+            aliases: ['ol', 'numbers', 'ordered'],
         },
         {
             name: 'To-do List',
             description: 'Create a checklist',
             icon: <CheckSquare className="w-5 h-5" />,
             action: (editor) => editor.chain().focus().toggleTaskList().run(),
+            aliases: ['todo', 'task', 'checkbox', 'checklist'],
         },
         {
             name: 'Code Block',
             description: 'Add a code snippet',
             icon: <Code className="w-5 h-5" />,
             action: (editor) => editor.chain().focus().toggleCodeBlock().run(),
+            aliases: ['code', 'pre', 'snippet'],
         },
         {
             name: 'Quote',
             description: 'Add a quote block',
             icon: <Quote className="w-5 h-5" />,
             action: (editor) => editor.chain().focus().toggleBlockquote().run(),
+            aliases: ['blockquote', 'quote'],
         },
         {
             name: 'Divider',
             description: 'Add a horizontal divider',
             icon: <Minus className="w-5 h-5" />,
             action: (editor) => editor.chain().focus().setHorizontalRule().run(),
+            aliases: ['hr', 'line', 'separator', 'divider'],
         },
         {
             name: 'Image',
@@ -115,12 +139,14 @@ export function SlashCommands({ editor, pageId }: SlashCommandsProps & { pageId?
                     editor.chain().focus().setImage({ src: url }).run();
                 }
             },
+            aliases: ['img', 'picture', 'photo'],
         },
         {
             name: 'Table',
             description: 'Add a simple table',
             icon: <Table className="w-5 h-5" />,
             action: (editor) => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+            aliases: ['table', 'grid'],
         },
         {
             name: 'Database',
@@ -146,6 +172,7 @@ export function SlashCommands({ editor, pageId }: SlashCommandsProps & { pageId?
                     }
                 });
             },
+            aliases: ['db', 'database'],
         },
         {
             name: 'Bar Chart',
@@ -157,6 +184,7 @@ export function SlashCommands({ editor, pageId }: SlashCommandsProps & { pageId?
                     attrs: { chartType: 'bar' }
                 }).run();
             },
+            aliases: ['bar', 'barchart'],
         },
         {
             name: 'Line Chart',
@@ -168,6 +196,7 @@ export function SlashCommands({ editor, pageId }: SlashCommandsProps & { pageId?
                     attrs: { chartType: 'line' }
                 }).run();
             },
+            aliases: ['line', 'linechart'],
         },
         {
             name: 'Pie Chart',
@@ -179,14 +208,44 @@ export function SlashCommands({ editor, pageId }: SlashCommandsProps & { pageId?
                     attrs: { chartType: 'pie' }
                 }).run();
             },
+            aliases: ['pie', 'piechart'],
+        },
+        {
+            name: '2 Columns',
+            description: 'Create a 2-column layout',
+            icon: <Columns2 className="w-5 h-5" />,
+            action: (editor) => {
+                editor.chain().focus().insertContent(createColumnsContent(2)).run();
+            },
+            aliases: ['2col', 'twocol', 'columns2'],
+        },
+        {
+            name: '3 Columns',
+            description: 'Create a 3-column layout',
+            icon: <Columns3 className="w-5 h-5" />,
+            action: (editor) => {
+                editor.chain().focus().insertContent(createColumnsContent(3)).run();
+            },
+            aliases: ['3col', 'threecol', 'columns3'],
+        },
+        {
+            name: '4 Columns',
+            description: 'Create a 4-column grid layout',
+            icon: <LayoutGrid className="w-5 h-5" />,
+            action: (editor) => {
+                editor.chain().focus().insertContent(createColumnsContent(4)).run();
+            },
+            aliases: ['4col', 'fourcol', 'columns4'],
         },
     ];
 
-    const filteredCommands = commands.filter(
-        (command) =>
-            command.name.toLowerCase().includes(query.toLowerCase()) ||
-            command.description.toLowerCase().includes(query.toLowerCase())
-    );
+    const filteredCommands = commands.filter((command) => {
+        const q = query.toLowerCase();
+        if (command.name.toLowerCase().includes(q)) return true;
+        if (command.description.toLowerCase().includes(q)) return true;
+        if (command.aliases?.some(alias => alias.toLowerCase().includes(q))) return true;
+        return false;
+    });
 
     const executeCommand = useCallback(
         (command: Command) => {

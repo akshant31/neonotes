@@ -18,6 +18,7 @@ import { EditorToolbar } from './EditorToolbar';
 import { SlashCommands } from './SlashCommands';
 import { DatabaseNode } from './extensions/DatabaseNode';
 import { ChartNode } from './extensions/ChartNode';
+import { ColumnsNode, ColumnNode } from './extensions/ColumnsNode';
 
 const lowlight = createLowlight(common);
 
@@ -70,6 +71,8 @@ export function BlockEditor({
             }),
             DatabaseNode,
             ChartNode,
+            ColumnsNode,
+            ColumnNode,
         ],
         content: content || {
             type: 'doc',
