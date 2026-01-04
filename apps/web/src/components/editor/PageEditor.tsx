@@ -15,6 +15,9 @@ import {
     ExternalLink,
     Image as ImageIcon,
     Smile,
+    Pencil,
+    Check,
+    Save,
 } from 'lucide-react';
 
 // Emoji picker simple implementation
@@ -27,6 +30,8 @@ export function PageEditor() {
     const [showMenu, setShowMenu] = useState(false);
     const [content, setContent] = useState<Record<string, unknown> | undefined>(undefined);
     const [isSaving, setIsSaving] = useState(false);
+    const [lastSaved, setLastSaved] = useState<Date | null>(null);
+    const [isEditMode, setIsEditMode] = useState(false);
 
     // Fetch full page data with blocks
     const { data: pageData, isLoading, refetch } = trpc.page.getById.useQuery(
@@ -49,6 +54,9 @@ export function PageEditor() {
     // Save blocks mutation
     const saveBlocksMutation = trpc.block.savePageBlocks.useMutation({
         onMutate: () => setIsSaving(true),
+        onSuccess: () => {
+            setLastSaved(new Date());
+        },
         onSettled: () => setIsSaving(false),
     });
 
@@ -73,6 +81,7 @@ export function PageEditor() {
     // Update title when page changes
     useEffect(() => {
         setTitle(currentPage?.title || '');
+        setIsEditMode(false); // Reset to read mode when page changes
     }, [currentPage?.id, currentPage?.title]);
 
     // Load content from page data
@@ -135,6 +144,28 @@ export function PageEditor() {
         debouncedContentSave(newContent);
     };
 
+    // Manual save function
+    const handleManualSave = () => {
+        if (currentPage && content?.content) {
+            const blocks = (content.content as unknown[]).map((block, index) => ({
+                type: 'paragraph',
+                content: block as Record<string, unknown>,
+                order: index,
+            }));
+            saveBlocksMutation.mutate({ pageId: currentPage.id, blocks });
+        }
+    };
+
+    // Format last saved time
+    const formatLastSaved = () => {
+        if (!lastSaved) return null;
+        const now = new Date();
+        const diff = Math.floor((now.getTime() - lastSaved.getTime()) / 1000);
+        if (diff < 60) return 'Saved just now';
+        if (diff < 3600) return `Saved ${Math.floor(diff / 60)}m ago`;
+        return `Saved at ${lastSaved.toLocaleTimeString()}`;
+    };
+
     if (!currentPage) {
         return null;
     }
@@ -151,34 +182,84 @@ export function PageEditor() {
         <div className="max-w-4xl mx-auto py-8">
             {/* Page header */}
             <div className="px-16 mb-8">
-                <div className="flex items-center gap-2 mb-4">
-                    {/* Icon picker */}
-                    <div className="relative">
-                        <button
-                            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                            className="p-2 text-2xl hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                        >
-                            {currentPage.icon || '📄'}
-                        </button>
-                        {showEmojiPicker && (
-                            <div className="absolute top-full left-0 mt-1 p-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-20 grid grid-cols-5 gap-1">
-                                {EMOJIS.map((emoji) => (
-                                    <button
-                                        key={emoji}
-                                        onClick={() => handleIconChange(emoji)}
-                                        className="p-2 text-xl hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                                    >
-                                        {emoji}
-                                    </button>
-                                ))}
+                {/* Edit mode bar - only shown when editing */}
+                {isEditMode && (
+                    <div className="flex items-center justify-between mb-4 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div className="flex items-center gap-2">
+                            <Pencil className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                            <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Editing mode</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            {/* Save status */}
+                            <div className="text-sm text-gray-500">
+                                {isSaving ? (
+                                    <span className="flex items-center gap-1">
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                        Saving...
+                                    </span>
+                                ) : (
+                                    formatLastSaved()
+                                )}
                             </div>
-                        )}
+                            {/* Manual save button */}
+                            <button
+                                onClick={handleManualSave}
+                                disabled={isSaving}
+                                className="flex items-center gap-1 px-2 py-1 text-sm text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-800/30 rounded transition-colors disabled:opacity-50"
+                            >
+                                <Save className="w-4 h-4" />
+                                Save
+                            </button>
+                            {/* Done button */}
+                            <button
+                                onClick={() => setIsEditMode(false)}
+                                className="flex items-center gap-1 px-3 py-1 text-sm bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors"
+                            >
+                                <Check className="w-4 h-4" />
+                                Done
+                            </button>
+                        </div>
                     </div>
+                )}
 
-                    <button className="flex items-center gap-1 px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
-                        <ImageIcon className="w-4 h-4" />
-                        Add cover
-                    </button>
+                <div className="flex items-center gap-2 mb-4">
+                    {/* Icon picker - only in edit mode */}
+                    {isEditMode && (
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                                className="p-2 text-2xl hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                            >
+                                {currentPage.icon || '📄'}
+                            </button>
+                            {showEmojiPicker && (
+                                <div className="absolute top-full left-0 mt-1 p-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-20 grid grid-cols-5 gap-1">
+                                    {EMOJIS.map((emoji) => (
+                                        <button
+                                            key={emoji}
+                                            onClick={() => handleIconChange(emoji)}
+                                            className="p-2 text-xl hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                                        >
+                                            {emoji}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Read-only icon display */}
+                    {!isEditMode && (
+                        <span className="p-2 text-2xl">{currentPage.icon || '📄'}</span>
+                    )}
+
+                    {/* Cover button - only in edit mode */}
+                    {isEditMode && (
+                        <button className="flex items-center gap-1 px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+                            <ImageIcon className="w-4 h-4" />
+                            Add cover
+                        </button>
+                    )}
 
                     {/* Favorite button */}
                     <button
@@ -191,8 +272,8 @@ export function PageEditor() {
                         <Star className={`w-4 h-4 ${currentPage.isFavorite ? 'fill-yellow-500' : ''}`} />
                     </button>
 
-                    {/* Category selector */}
-                    {pageData && (
+                    {/* Category selector - only in edit mode */}
+                    {isEditMode && pageData && (
                         <CategorySelector
                             pageId={currentPage.id}
                             currentCategoryId={(pageData as any).categoryId ?? null}
@@ -210,6 +291,19 @@ export function PageEditor() {
                         </button>
                         {showMenu && (
                             <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-20">
+                                {/* Edit option - only when not in edit mode */}
+                                {!isEditMode && (
+                                    <button
+                                        onClick={() => {
+                                            setIsEditMode(true);
+                                            setShowMenu(false);
+                                        }}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                                    >
+                                        <Pencil className="w-4 h-4" />
+                                        Edit page
+                                    </button>
+                                )}
                                 <button className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <Copy className="w-4 h-4" />
                                     Duplicate
@@ -234,21 +328,19 @@ export function PageEditor() {
                     </div>
                 </div>
 
-                {/* Title input */}
-                <input
-                    type="text"
-                    value={title}
-                    onChange={handleTitleChange}
-                    placeholder="Untitled"
-                    className="w-full text-4xl font-bold bg-transparent outline-none placeholder:text-gray-300 dark:placeholder:text-gray-600"
-                />
-
-                {/* Saving indicator */}
-                {isSaving && (
-                    <div className="flex items-center gap-2 mt-2 text-sm text-gray-500">
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        Saving...
-                    </div>
+                {/* Title - editable only in edit mode */}
+                {isEditMode ? (
+                    <input
+                        type="text"
+                        value={title}
+                        onChange={handleTitleChange}
+                        placeholder="Untitled"
+                        className="w-full text-4xl font-bold bg-transparent outline-none placeholder:text-gray-300 dark:placeholder:text-gray-600"
+                    />
+                ) : (
+                    <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100">
+                        {title || 'Untitled'}
+                    </h1>
                 )}
             </div>
 
@@ -259,6 +351,7 @@ export function PageEditor() {
                     onChange={handleContentChange}
                     placeholder="Type '/' for commands, or just start writing..."
                     pageId={currentPage.id}
+                    editable={isEditMode}
                 />
             </div>
         </div>

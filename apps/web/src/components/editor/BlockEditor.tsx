@@ -98,6 +98,13 @@ export function BlockEditor({
         }
     }, [editor, content]);
 
+    // Update editable state when prop changes
+    useEffect(() => {
+        if (editor) {
+            editor.setEditable(editable);
+        }
+    }, [editor, editable]);
+
     const handleKeyDown = useCallback(
         (event: React.KeyboardEvent) => {
             // Slash command trigger is handled by SlashCommands component
@@ -116,8 +123,8 @@ export function BlockEditor({
 
     return (
         <div className="block-editor" onKeyDown={handleKeyDown}>
-            <EditorToolbar editor={editor} />
-            <SlashCommands editor={editor} pageId={pageId} />
+            {editable && <EditorToolbar editor={editor} />}
+            {editable && <SlashCommands editor={editor} pageId={pageId} />}
             <EditorContent editor={editor} />
         </div>
     );
