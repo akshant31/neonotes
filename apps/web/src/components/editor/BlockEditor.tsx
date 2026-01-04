@@ -17,6 +17,7 @@ import { useCallback, useEffect } from 'react';
 import { EditorToolbar } from './EditorToolbar';
 import { SlashCommands } from './SlashCommands';
 import { DatabaseNode } from './extensions/DatabaseNode';
+import { ChartNode } from './extensions/ChartNode';
 
 const lowlight = createLowlight(common);
 
@@ -68,6 +69,7 @@ export function BlockEditor({
                 lowlight,
             }),
             DatabaseNode,
+            ChartNode,
         ],
         content: content || {
             type: 'doc',

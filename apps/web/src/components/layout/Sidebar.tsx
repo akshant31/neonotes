@@ -29,16 +29,27 @@ interface PageItemProps {
     selectedId?: string;
 }
 
-function PageItem({ page, level = 0, onSelect, selectedId }: PageItemProps) {
+interface PageItemProps {
+    page: Page;
+    level?: number;
+    onSelect: (page: Page) => void;
+    onCreateSubPage?: (parentId: string) => void;
+    selectedId?: string;
+}
+
+function PageItem({ page, level = 0, onSelect, onCreateSubPage, selectedId }: PageItemProps) {
     const [isExpanded, setIsExpanded] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
     const hasChildren = page.children && page.children.length > 0;
 
     return (
         <div>
             <button
                 onClick={() => onSelect(page)}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
                 className={cn(
-                    'w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition-colors',
+                    'w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition-colors group',
                     'hover:bg-gray-100 dark:hover:bg-gray-800',
                     selectedId === page.id && 'bg-gray-100 dark:bg-gray-800'
                 )}
@@ -66,6 +77,20 @@ function PageItem({ page, level = 0, onSelect, selectedId }: PageItemProps) {
                     {page.title || 'Untitled'}
                 </span>
                 {page.isFavorite && <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />}
+                {/* Add sub-page button on hover */}
+                {isHovered && onCreateSubPage && (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onCreateSubPage(page.id);
+                            setIsExpanded(true);
+                        }}
+                        className="p-0.5 hover:bg-gray-300 dark:hover:bg-gray-600 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Add sub-page"
+                    >
+                        <Plus className="w-3 h-3" />
+                    </button>
+                )}
             </button>
             {isExpanded && hasChildren && (
                 <div>
@@ -75,6 +100,7 @@ function PageItem({ page, level = 0, onSelect, selectedId }: PageItemProps) {
                             page={child as Page}
                             level={level + 1}
                             onSelect={onSelect}
+                            onCreateSubPage={onCreateSubPage}
                             selectedId={selectedId}
                         />
                     ))}
@@ -147,6 +173,17 @@ export function Sidebar() {
                 workspaceId,
                 title: 'Untitled',
                 icon: '📄',
+            });
+        }
+    };
+
+    const handleCreateSubPage = (parentId: string) => {
+        if (workspaceId) {
+            createPageMutation.mutate({
+                workspaceId,
+                title: 'Untitled',
+                icon: '📄',
+                parentId,
             });
         }
     };
@@ -252,6 +289,7 @@ export function Sidebar() {
                                 key={page.id}
                                 page={page}
                                 onSelect={setCurrentPage}
+                                onCreateSubPage={handleCreateSubPage}
                                 selectedId={currentPage?.id}
                             />
                         ))}

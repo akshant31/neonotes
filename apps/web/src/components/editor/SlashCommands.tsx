@@ -16,6 +16,9 @@ import {
     Image,
     Table,
     LayoutDashboard,
+    BarChart2,
+    LineChart,
+    PieChart,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { trpc } from '@/utils/trpc';
@@ -142,6 +145,39 @@ export function SlashCommands({ editor, pageId }: SlashCommandsProps & { pageId?
                         }).run();
                     }
                 });
+            },
+        },
+        {
+            name: 'Bar Chart',
+            description: 'Add a bar chart visualization',
+            icon: <BarChart2 className="w-5 h-5" />,
+            action: (editor) => {
+                editor.chain().focus().insertContent({
+                    type: 'chart',
+                    attrs: { chartType: 'bar' }
+                }).run();
+            },
+        },
+        {
+            name: 'Line Chart',
+            description: 'Add a line chart visualization',
+            icon: <LineChart className="w-5 h-5" />,
+            action: (editor) => {
+                editor.chain().focus().insertContent({
+                    type: 'chart',
+                    attrs: { chartType: 'line' }
+                }).run();
+            },
+        },
+        {
+            name: 'Pie Chart',
+            description: 'Add a pie chart visualization',
+            icon: <PieChart className="w-5 h-5" />,
+            action: (editor) => {
+                editor.chain().focus().insertContent({
+                    type: 'chart',
+                    attrs: { chartType: 'pie' }
+                }).run();
             },
         },
     ];
