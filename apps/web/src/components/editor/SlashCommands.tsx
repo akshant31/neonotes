@@ -18,6 +18,7 @@ import {
     LayoutDashboard,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { trpc } from '@/utils/trpc';
 
 interface SlashCommandsProps {
     editor: Editor;
@@ -30,100 +31,120 @@ interface Command {
     action: (editor: Editor) => void;
 }
 
-const commands: Command[] = [
-    {
-        name: 'Text',
-        description: 'Just start writing with plain text',
-        icon: <Type className="w-5 h-5" />,
-        action: (editor) => editor.chain().focus().setParagraph().run(),
-    },
-    {
-        name: 'Heading 1',
-        description: 'Large section heading',
-        icon: <Heading1 className="w-5 h-5" />,
-        action: (editor) => editor.chain().focus().toggleHeading({ level: 1 }).run(),
-    },
-    {
-        name: 'Heading 2',
-        description: 'Medium section heading',
-        icon: <Heading2 className="w-5 h-5" />,
-        action: (editor) => editor.chain().focus().toggleHeading({ level: 2 }).run(),
-    },
-    {
-        name: 'Heading 3',
-        description: 'Small section heading',
-        icon: <Heading3 className="w-5 h-5" />,
-        action: (editor) => editor.chain().focus().toggleHeading({ level: 3 }).run(),
-    },
-    {
-        name: 'Bullet List',
-        description: 'Create a simple bullet list',
-        icon: <List className="w-5 h-5" />,
-        action: (editor) => editor.chain().focus().toggleBulletList().run(),
-    },
-    {
-        name: 'Numbered List',
-        description: 'Create a numbered list',
-        icon: <ListOrdered className="w-5 h-5" />,
-        action: (editor) => editor.chain().focus().toggleOrderedList().run(),
-    },
-    {
-        name: 'To-do List',
-        description: 'Create a checklist',
-        icon: <CheckSquare className="w-5 h-5" />,
-        action: (editor) => editor.chain().focus().toggleTaskList().run(),
-    },
-    {
-        name: 'Code Block',
-        description: 'Add a code snippet',
-        icon: <Code className="w-5 h-5" />,
-        action: (editor) => editor.chain().focus().toggleCodeBlock().run(),
-    },
-    {
-        name: 'Quote',
-        description: 'Add a quote block',
-        icon: <Quote className="w-5 h-5" />,
-        action: (editor) => editor.chain().focus().toggleBlockquote().run(),
-    },
-    {
-        name: 'Divider',
-        description: 'Add a horizontal divider',
-        icon: <Minus className="w-5 h-5" />,
-        action: (editor) => editor.chain().focus().setHorizontalRule().run(),
-    },
-    {
-        name: 'Image',
-        description: 'Add an image',
-        icon: <Image className="w-5 h-5" />,
-        action: (editor) => {
-            const url = window.prompt('Enter image URL:');
-            if (url) {
-                editor.chain().focus().setImage({ src: url }).run();
-            }
-        },
-    },
-    {
-        name: 'Table',
-        description: 'Add a table',
-        icon: <Table className="w-5 h-5" />,
-        action: (editor) => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
-    },
-    {
-        name: 'Database',
-        description: 'Add an inline database',
-        icon: <LayoutDashboard className="w-5 h-5" />,
-        action: (editor) => {
-            // TODO: Implement inline database insertion
-            alert('Database block coming soon!');
-        },
-    },
-];
 
-export function SlashCommands({ editor }: SlashCommandsProps) {
+
+export function SlashCommands({ editor, pageId }: SlashCommandsProps & { pageId?: string }) {
     const [isOpen, setIsOpen] = useState(false);
     const [query, setQuery] = useState('');
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [position, setPosition] = useState({ top: 0, left: 0 });
+
+    const createDatabaseMutation = trpc.database.create.useMutation();
+
+    const commands: Command[] = [
+        {
+            name: 'Text',
+            description: 'Just start writing with plain text',
+            icon: <Type className="w-5 h-5" />,
+            action: (editor) => editor.chain().focus().setParagraph().run(),
+        },
+        {
+            name: 'Heading 1',
+            description: 'Large section heading',
+            icon: <Heading1 className="w-5 h-5" />,
+            action: (editor) => editor.chain().focus().toggleHeading({ level: 1 }).run(),
+        },
+        {
+            name: 'Heading 2',
+            description: 'Medium section heading',
+            icon: <Heading2 className="w-5 h-5" />,
+            action: (editor) => editor.chain().focus().toggleHeading({ level: 2 }).run(),
+        },
+        {
+            name: 'Heading 3',
+            description: 'Small section heading',
+            icon: <Heading3 className="w-5 h-5" />,
+            action: (editor) => editor.chain().focus().toggleHeading({ level: 3 }).run(),
+        },
+        {
+            name: 'Bullet List',
+            description: 'Create a simple bullet list',
+            icon: <List className="w-5 h-5" />,
+            action: (editor) => editor.chain().focus().toggleBulletList().run(),
+        },
+        {
+            name: 'Numbered List',
+            description: 'Create a numbered list',
+            icon: <ListOrdered className="w-5 h-5" />,
+            action: (editor) => editor.chain().focus().toggleOrderedList().run(),
+        },
+        {
+            name: 'To-do List',
+            description: 'Create a checklist',
+            icon: <CheckSquare className="w-5 h-5" />,
+            action: (editor) => editor.chain().focus().toggleTaskList().run(),
+        },
+        {
+            name: 'Code Block',
+            description: 'Add a code snippet',
+            icon: <Code className="w-5 h-5" />,
+            action: (editor) => editor.chain().focus().toggleCodeBlock().run(),
+        },
+        {
+            name: 'Quote',
+            description: 'Add a quote block',
+            icon: <Quote className="w-5 h-5" />,
+            action: (editor) => editor.chain().focus().toggleBlockquote().run(),
+        },
+        {
+            name: 'Divider',
+            description: 'Add a horizontal divider',
+            icon: <Minus className="w-5 h-5" />,
+            action: (editor) => editor.chain().focus().setHorizontalRule().run(),
+        },
+        {
+            name: 'Image',
+            description: 'Add an image',
+            icon: <Image className="w-5 h-5" />,
+            action: (editor) => {
+                const url = window.prompt('Enter image URL:');
+                if (url) {
+                    editor.chain().focus().setImage({ src: url }).run();
+                }
+            },
+        },
+        {
+            name: 'Table',
+            description: 'Add a simple table',
+            icon: <Table className="w-5 h-5" />,
+            action: (editor) => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+        },
+        {
+            name: 'Database',
+            description: 'Add an inline database',
+            icon: <LayoutDashboard className="w-5 h-5" />,
+            action: (editor) => {
+                if (!pageId) {
+                    alert('Save the page first to add a database.');
+                    return;
+                }
+
+                createDatabaseMutation.mutate({
+                    pageId,
+                    name: 'Inline Database',
+                }, {
+                    onSuccess: (database) => {
+                        editor.chain().focus().insertContent({
+                            type: 'database',
+                            attrs: {
+                                databaseId: database.id
+                            }
+                        }).run();
+                    }
+                });
+            },
+        },
+    ];
 
     const filteredCommands = commands.filter(
         (command) =>

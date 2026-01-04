@@ -54,6 +54,7 @@ export const pageRouter = createTRPCRouter({
                 title: z.string().optional().default('Untitled'),
                 icon: z.string().optional(),
                 parentId: z.string().optional(),
+                categoryId: z.string().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -63,6 +64,7 @@ export const pageRouter = createTRPCRouter({
                     icon: input.icon,
                     workspaceId: input.workspaceId,
                     parentId: input.parentId,
+                    categoryId: input.categoryId,
                 },
             });
         }),
@@ -77,6 +79,7 @@ export const pageRouter = createTRPCRouter({
                 coverImage: z.string().optional(),
                 isFavorite: z.boolean().optional(),
                 isArchived: z.boolean().optional(),
+                categoryId: z.string().nullable().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -170,5 +173,107 @@ export const pageRouter = createTRPCRouter({
                 orderBy: { updatedAt: 'desc' },
                 take: 20,
             });
+        }),
+
+    // Get dashboard stats (weekly activity and page categories)
+    stats: publicProcedure
+        .input(z.object({ workspaceId: z.string() }))
+        .query(async ({ ctx, input }) => {
+            const now = new Date();
+            const weekAgo = new Date(now);
+            weekAgo.setDate(weekAgo.getDate() - 7);
+
+            // Get all pages for this workspace
+            const allPages = await ctx.prisma.page.findMany({
+                where: {
+                    workspaceId: input.workspaceId,
+                    isArchived: false,
+                },
+                select: {
+                    id: true,
+                    title: true,
+                    categoryId: true,
+                    createdAt: true,
+                    updatedAt: true,
+                },
+            });
+
+            // Get all categories with page counts
+            const categories = await ctx.prisma.category.findMany({
+                where: { workspaceId: input.workspaceId },
+                include: {
+                    _count: { select: { pages: true } },
+                },
+            });
+
+            // Calculate weekly activity (pages created per day for last 7 days)
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const weeklyData: Record<string, number> = {};
+
+            // Initialize all days to 0
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date(now);
+                d.setDate(d.getDate() - i);
+                const dayName = days[d.getDay()];
+                weeklyData[dayName] = 0;
+            }
+
+            // Count pages created each day
+            allPages.forEach(page => {
+                const createdDate = new Date(page.createdAt);
+                if (createdDate >= weekAgo) {
+                    const dayName = days[createdDate.getDay()];
+                    if (weeklyData[dayName] !== undefined) {
+                        weeklyData[dayName]++;
+                    }
+                }
+            });
+
+            // Order days starting from today - 6
+            const orderedDays: string[] = [];
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date(now);
+                d.setDate(d.getDate() - i);
+                orderedDays.push(days[d.getDay()]);
+            }
+
+            const weeklyActivity = {
+                xAxis: orderedDays,
+                series: [
+                    {
+                        name: 'Pages Created',
+                        data: orderedDays.map(day => weeklyData[day] || 0),
+                    },
+                ],
+            };
+
+            // Build category data from actual Category model
+            let categoryData = categories
+                .filter(c => c._count.pages > 0)
+                .map(c => ({ name: c.name, value: c._count.pages }))
+                .sort((a, b) => b.value - a.value)
+                .slice(0, 5);
+
+            // Count uncategorized pages
+            const uncategorizedCount = allPages.filter(p => !p.categoryId).length;
+            if (uncategorizedCount > 0) {
+                categoryData.push({ name: 'Uncategorized', value: uncategorizedCount });
+            }
+
+            // If no categories, show placeholder
+            if (categoryData.length === 0) {
+                categoryData = [{ name: 'All Pages', value: allPages.length || 1 }];
+            }
+
+            // Calculate additional stats
+            const totalPages = allPages.length;
+            const pagesThisWeek = allPages.filter(p => new Date(p.createdAt) >= weekAgo).length;
+
+            return {
+                weeklyActivity,
+                categoryData,
+                totalPages,
+                pagesThisWeek,
+            };
         }),
 });

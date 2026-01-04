@@ -1,0 +1,244 @@
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
+
+import { trpc } from '@/utils/trpc';
+import type { Database, DatabaseColumn, DatabaseRow, DatabaseCell } from '@prisma/client';
+import { Plus, Type, Hash, List, Calendar, CheckSquare } from 'lucide-react';
+import { TextCell } from './cells/TextCell';
+import { NumberCell } from './cells/NumberCell';
+import { CheckboxCell } from './cells/CheckboxCell';
+import { DateCell } from './cells/DateCell';
+import { SelectCell, getRandomColor } from './cells/SelectCell';
+import { ColumnHeader } from './ColumnHeader';
+
+type FullDatabase = Database & {
+    columns: DatabaseColumn[];
+    rows: (DatabaseRow & { cells: DatabaseCell[] })[];
+    views: unknown[];
+};
+
+
+
+export function TableView({ database }: { database: FullDatabase }) {
+    const utils = trpc.useUtils();
+    const [colWidths, setColWidths] = useState<Record<string, number>>({});
+
+    useEffect(() => {
+        const widths: Record<string, number> = {};
+        database.columns.forEach(col => {
+            if (col.width) widths[col.id] = col.width;
+        });
+        setColWidths(widths);
+    }, [database.columns]);
+
+    const addRowMutation = trpc.database.addRow.useMutation({
+        onSuccess: () => utils.database.getById.invalidate({ id: database.id }),
+    });
+
+    const addColumnMutation = trpc.database.addColumn.useMutation({
+        onSuccess: () => utils.database.getById.invalidate({ id: database.id }),
+    });
+
+    const updateCellMutation = trpc.database.updateCell.useMutation({
+        onSuccess: () => {
+            // Optimistic update handles the UI, but we invalidate to ensure consistency
+            // utils.database.getById.invalidate({ id: database.id });
+        },
+    });
+
+    const handleCellUpdate = (rowId: string, columnId: string, value: unknown) => {
+        updateCellMutation.mutate({ rowId, columnId, value });
+    };
+
+    const updateColumnMutation = trpc.database.updateColumn.useMutation({
+        onSuccess: () => utils.database.getById.invalidate({ id: database.id }),
+    });
+
+    const deleteColumnMutation = trpc.database.deleteColumn.useMutation({
+        onSuccess: () => utils.database.getById.invalidate({ id: database.id }),
+    });
+
+    const handleColumnUpdate = (columnId: string, updates: Partial<DatabaseColumn>) => {
+        updateColumnMutation.mutate({
+            id: columnId,
+            ...updates
+        });
+    };
+
+    const handleColumnDelete = (columnId: string) => {
+        deleteColumnMutation.mutate({
+            id: columnId
+        });
+    };
+
+    const handleOptionCreate = (column: DatabaseColumn, newLabel: string) => {
+        const currentOptions = (column.options as any)?.options || [];
+        const newOption = {
+            id: crypto.randomUUID(),
+            label: newLabel,
+            color: getRandomColor(),
+        };
+
+        updateColumnMutation.mutate({
+            id: column.id,
+            options: {
+                options: [...currentOptions, newOption]
+            }
+        });
+    };
+
+    const handleAddColumn = () => {
+        addColumnMutation.mutate({
+            databaseId: database.id,
+            name: 'New Column',
+            type: 'text',
+        });
+    };
+
+    return (
+        <div className="w-full overflow-x-auto pb-2">
+            <table className="min-w-full border-collapse text-sm">
+                <thead>
+                    <tr>
+                        {database.columns.map((col) => (
+                            <th
+                                key={col.id}
+                                className="bg-gray-50 dark:bg-gray-900 border-y border-r border-gray-200 dark:border-gray-800 px-3 py-2 text-left font-normal min-w-[50px] whitespace-nowrap first:border-l relative group"
+                                style={{ width: colWidths[col.id] || 150 }}
+                            >
+                                <ColumnHeader
+                                    column={col}
+                                    onUpdate={(updates) => handleColumnUpdate(col.id, updates)}
+                                    onDelete={() => handleColumnDelete(col.id)}
+                                />
+                                <div
+                                    className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        const startX = e.pageX;
+                                        const startWidth = colWidths[col.id] || col.width || 150;
+
+                                        const handleMouseMove = (moveEvent: MouseEvent) => {
+                                            const newWidth = Math.max(50, startWidth + (moveEvent.pageX - startX));
+                                            setColWidths(prev => ({ ...prev, [col.id]: newWidth }));
+                                        };
+
+                                        const handleMouseUp = (upEvent: MouseEvent) => {
+                                            const newWidth = Math.max(50, startWidth + (upEvent.pageX - startX));
+                                            handleColumnUpdate(col.id, { width: newWidth });
+                                            document.removeEventListener('mousemove', handleMouseMove);
+                                            document.removeEventListener('mouseup', handleMouseUp);
+                                        };
+
+                                        document.addEventListener('mousemove', handleMouseMove);
+                                        document.addEventListener('mouseup', handleMouseUp);
+                                    }}
+                                />
+                            </th>
+                        ))}
+                        <th className="bg-gray-50 dark:bg-gray-900 border-y border-r border-gray-200 dark:border-gray-800 w-10 px-1 text-center min-w-[40px]">
+                            <button
+                                onClick={handleAddColumn}
+                                disabled={addColumnMutation.isLoading}
+                                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-800 rounded transition-colors text-gray-500"
+                            >
+                                <Plus className="w-4 h-4" />
+                            </button>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-900">
+                    {database.rows.map((row) => (
+                        <tr key={row.id} className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/20">
+                            {database.columns.map((col) => {
+                                const cell = row.cells.find((c) => c.columnId === col.id);
+                                let CellComponent;
+
+                                switch (col.type) {
+                                    case 'text':
+                                        CellComponent = (
+                                            <TextCell
+                                                value={cell?.value as string}
+                                                onUpdate={(val) => handleCellUpdate(row.id, col.id, val)}
+                                            />
+                                        );
+                                        break;
+                                    case 'number':
+                                        CellComponent = ( // @ts-ignore
+                                            <NumberCell
+                                                value={cell?.value as number | null}
+                                                onUpdate={(val) => handleCellUpdate(row.id, col.id, val)}
+                                            />
+                                        );
+                                        break;
+                                    case 'checkbox':
+                                        CellComponent = ( // @ts-ignore
+                                            <CheckboxCell
+                                                value={cell?.value as boolean | null}
+                                                onUpdate={(val) => handleCellUpdate(row.id, col.id, val)}
+                                            />
+                                        );
+                                        break;
+                                    case 'date':
+                                        CellComponent = ( // @ts-ignore
+                                            <DateCell
+                                                value={cell?.value as string | null}
+                                                onUpdate={(val) => handleCellUpdate(row.id, col.id, val)}
+                                            />
+                                        );
+                                        break;
+                                    case 'select':
+                                    case 'multiSelect': // Reuse SelectCell for now, maybe need MultiSelect later
+                                        const options = (col.options as any)?.options || [];
+                                        CellComponent = ( // @ts-ignore
+                                            <SelectCell
+                                                value={cell?.value as string | null}
+                                                options={options}
+                                                onUpdate={(val) => handleCellUpdate(row.id, col.id, val)}
+                                                onCreateOption={(label) => handleOptionCreate(col, label)}
+                                            />
+                                        );
+                                        break;
+                                    default:
+                                        CellComponent = (
+                                            <TextCell
+                                                value={cell?.value as string}
+                                                onUpdate={(val) => handleCellUpdate(row.id, col.id, val)}
+                                            />
+                                        );
+                                }
+
+                                return (
+                                    <td
+                                        key={`${row.id}-${col.id}`}
+                                        className="border-b border-r border-gray-200 dark:border-gray-800 p-0 h-9 first:border-l relative"
+                                    >
+                                        {CellComponent}
+                                    </td>
+                                );
+                            })}
+                            <td className="border-b border-r border-gray-200 dark:border-gray-800 p-0"></td>
+                        </tr>
+                    ))}
+                    {/* Add Row Button Row */}
+                    <tr>
+                        <td
+                            colSpan={database.columns.length + 1}
+                            className="border-b border-x border-gray-200 dark:border-gray-800 p-1"
+                        >
+                            <button
+                                onClick={() => addRowMutation.mutate({ databaseId: database.id })}
+                                disabled={addRowMutation.isLoading}
+                                className="flex items-center gap-2 px-2 py-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-sm w-full text-left"
+                            >
+                                <Plus className="w-4 h-4" />
+                                New
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    );
+}

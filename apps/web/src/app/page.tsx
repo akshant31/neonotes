@@ -7,23 +7,6 @@ import { useAppStore } from '@/stores/app-store';
 import { trpc } from '@/utils/trpc';
 import { Plus, FileText, BarChart3, Clock, CheckSquare, Loader2 } from 'lucide-react';
 
-// Sample chart data
-const weeklyActivity = {
-  xAxis: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-  series: [
-    { name: 'Pages Created', data: [3, 5, 2, 8, 4, 1, 6] },
-    { name: 'Tasks Done', data: [12, 8, 15, 10, 18, 5, 14] },
-  ],
-};
-
-const categoryData = [
-  { name: 'Work', value: 35 },
-  { name: 'Personal', value: 25 },
-  { name: 'Projects', value: 20 },
-  { name: 'Learning', value: 15 },
-  { name: 'Other', value: 5 },
-];
-
 function Dashboard() {
   const { setCurrentPage, currentWorkspace, pages } = useAppStore();
 
@@ -41,6 +24,12 @@ function Dashboard() {
     { enabled: !!currentWorkspace?.id }
   );
 
+  // Fetch dashboard stats
+  const { data: stats, isLoading: statsLoading } = trpc.page.stats.useQuery(
+    { workspaceId: currentWorkspace?.id ?? '' },
+    { enabled: !!currentWorkspace?.id }
+  );
+
   const handleCreatePage = () => {
     if (currentWorkspace?.id) {
       createPageMutation.mutate({
@@ -50,6 +39,17 @@ function Dashboard() {
       });
     }
   };
+
+  // Default data for charts when loading
+  const defaultWeeklyActivity = {
+    xAxis: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    series: [{ name: 'Pages Created', data: [0, 0, 0, 0, 0, 0, 0] }],
+  };
+
+  const defaultCategoryData = [{ name: 'No Data', value: 1 }];
+
+  const weeklyActivity = stats?.weeklyActivity ?? defaultWeeklyActivity;
+  const categoryData = stats?.categoryData ?? defaultCategoryData;
 
   return (
     <div className="min-h-screen p-8">
@@ -68,31 +68,31 @@ function Dashboard() {
         <StatGrid>
           <StatCard
             title="Total Pages"
-            value={pages.length.toString()}
+            value={(stats?.totalPages ?? pages.length).toString()}
             icon={<FileText className="w-5 h-5" />}
-            change={pages.length > 0 ? 12 : 0}
-            trend={pages.length > 0 ? 'up' : 'neutral'}
+            change={stats?.pagesThisWeek ?? 0}
+            trend={(stats?.pagesThisWeek ?? 0) > 0 ? 'up' : 'neutral'}
           />
           <StatCard
-            title="Tasks Completed"
-            value="128"
+            title="This Week"
+            value={(stats?.pagesThisWeek ?? 0).toString()}
             icon={<CheckSquare className="w-5 h-5" />}
-            change={18}
-            trend="up"
+            change={stats?.pagesThisWeek ?? 0}
+            trend={(stats?.pagesThisWeek ?? 0) > 0 ? 'up' : 'neutral'}
           />
           <StatCard
-            title="Active Projects"
-            value="7"
+            title="Categories"
+            value={(stats?.categoryData?.length ?? 0).toString()}
             icon={<BarChart3 className="w-5 h-5" />}
-            change={2}
-            trend="up"
+            change={0}
+            trend="neutral"
           />
           <StatCard
-            title="Hours Logged"
-            value="24.5h"
+            title="Recent Activity"
+            value={recentPages?.length?.toString() ?? '0'}
             icon={<Clock className="w-5 h-5" />}
-            change={5}
-            trend="up"
+            change={0}
+            trend="neutral"
           />
         </StatGrid>
 

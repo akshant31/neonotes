@@ -3,6 +3,7 @@
 import { useEffect, useCallback, useState } from 'react';
 import { trpc } from '@/utils/trpc';
 import { BlockEditor } from '@/components/editor';
+import { CategorySelector } from '@/components/editor/CategorySelector';
 import { useAppStore } from '@/stores/app-store';
 import { debounce } from '@/lib/utils';
 import {
@@ -20,7 +21,7 @@ import {
 const EMOJIS = ['📄', '📝', '📋', '📌', '📎', '🔖', '📚', '💡', '🎯', '🚀', '⭐', '💻', '🔬', '🎨', '📊', '📈', '🗺️', '🏠', '💼', '🎓'];
 
 export function PageEditor() {
-    const { currentPage, updatePage } = useAppStore();
+    const { currentPage, updatePage, setCurrentPage } = useAppStore();
     const [title, setTitle] = useState(currentPage?.title || '');
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
@@ -33,10 +34,15 @@ export function PageEditor() {
         { enabled: !!currentPage?.id }
     );
 
+    // TRPC utils for cache invalidation
+    const utils = trpc.useUtils();
+
     // Update page mutation
     const updatePageMutation = trpc.page.update.useMutation({
         onSuccess: (updatedPage) => {
             updatePage(updatedPage.id, updatedPage);
+            // Invalidate page list so sidebar updates
+            utils.page.list.invalidate();
         },
     });
 
@@ -47,7 +53,12 @@ export function PageEditor() {
     });
 
     // Delete page mutation
-    const deletePageMutation = trpc.page.delete.useMutation();
+    const deletePageMutation = trpc.page.delete.useMutation({
+        onSuccess: () => {
+            setCurrentPage(null);
+            utils.page.list.invalidate();
+        },
+    });
 
     // Toggle favorite mutation
     const toggleFavorite = () => {
@@ -173,12 +184,21 @@ export function PageEditor() {
                     <button
                         onClick={toggleFavorite}
                         className={`flex items-center gap-1 px-2 py-1 text-sm rounded-lg transition-colors ${currentPage.isFavorite
-                                ? 'text-yellow-500'
-                                : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'
+                            ? 'text-yellow-500'
+                            : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'
                             }`}
                     >
                         <Star className={`w-4 h-4 ${currentPage.isFavorite ? 'fill-yellow-500' : ''}`} />
                     </button>
+
+                    {/* Category selector */}
+                    {pageData && (
+                        <CategorySelector
+                            pageId={currentPage.id}
+                            currentCategoryId={(pageData as any).categoryId ?? null}
+                            workspaceId={currentPage.workspaceId}
+                        />
+                    )}
 
                     {/* More menu */}
                     <div className="relative ml-auto">
@@ -238,6 +258,7 @@ export function PageEditor() {
                     content={content}
                     onChange={handleContentChange}
                     placeholder="Type '/' for commands, or just start writing..."
+                    pageId={currentPage.id}
                 />
             </div>
         </div>

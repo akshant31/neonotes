@@ -16,6 +16,7 @@ import { common, createLowlight } from 'lowlight';
 import { useCallback, useEffect } from 'react';
 import { EditorToolbar } from './EditorToolbar';
 import { SlashCommands } from './SlashCommands';
+import { DatabaseNode } from './extensions/DatabaseNode';
 
 const lowlight = createLowlight(common);
 
@@ -24,6 +25,7 @@ interface BlockEditorProps {
     onChange?: (content: Record<string, unknown>) => void;
     editable?: boolean;
     placeholder?: string;
+    pageId?: string;
 }
 
 export function BlockEditor({
@@ -31,6 +33,7 @@ export function BlockEditor({
     onChange,
     editable = true,
     placeholder = "Type '/' for commands...",
+    pageId,
 }: BlockEditorProps) {
     const editor = useEditor({
         extensions: [
@@ -64,6 +67,7 @@ export function BlockEditor({
             CodeBlockLowlight.configure({
                 lowlight,
             }),
+            DatabaseNode,
         ],
         content: content || {
             type: 'doc',
@@ -108,7 +112,7 @@ export function BlockEditor({
     return (
         <div className="block-editor" onKeyDown={handleKeyDown}>
             <EditorToolbar editor={editor} />
-            <SlashCommands editor={editor} />
+            <SlashCommands editor={editor} pageId={pageId} />
             <EditorContent editor={editor} />
         </div>
     );

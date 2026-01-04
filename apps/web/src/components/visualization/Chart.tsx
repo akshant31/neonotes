@@ -3,9 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
-// Dynamic import for echarts to avoid SSR issues
-let echarts: any = null;
-
 interface ChartData {
     xAxis?: string[];
     series?: Array<{ name?: string; data: number[] }> | Array<{ name: string; value: number }>;
@@ -19,6 +16,33 @@ interface ChartProps {
     loading?: boolean;
 }
 
+// Skeleton loader component
+function ChartSkeleton({ height, type }: { height: number; type: string }) {
+    return (
+        <div
+            className="flex items-center justify-center bg-gray-800/50 rounded-lg animate-pulse"
+            style={{ height }}
+        >
+            <div className="flex flex-col items-center gap-3">
+                <div className="flex gap-2">
+                    {type === 'pie' ? (
+                        <div className="w-24 h-24 rounded-full bg-gray-700/50" />
+                    ) : (
+                        <>
+                            <div className="w-4 h-16 rounded bg-gray-700/50" />
+                            <div className="w-4 h-24 rounded bg-gray-700/50" />
+                            <div className="w-4 h-12 rounded bg-gray-700/50" />
+                            <div className="w-4 h-20 rounded bg-gray-700/50" />
+                            <div className="w-4 h-8 rounded bg-gray-700/50" />
+                        </>
+                    )}
+                </div>
+                <div className="text-gray-500 text-sm">Loading chart...</div>
+            </div>
+        </div>
+    );
+}
+
 export function Chart({
     type,
     data,
@@ -28,35 +52,37 @@ export function Chart({
 }: ChartProps) {
     const chartRef = useRef<HTMLDivElement>(null);
     const chartInstance = useRef<any>(null);
-    const [isClient, setIsClient] = useState(false);
+    const [echartsLib, setEchartsLib] = useState<any>(null);
 
-    // Only run on client
+    // Load echarts on client
     useEffect(() => {
-        setIsClient(true);
-        // Dynamic import echarts
         import('echarts').then((mod) => {
-            echarts = mod;
-        });
+            setEchartsLib(mod);
+        }).catch(err => console.error('Failed to load echarts:', err));
     }, []);
 
-    // Initialize chart
+    // Initialize chart when echarts is loaded and ref is ready
     useEffect(() => {
-        if (!isClient || !chartRef.current || !echarts) return;
+        if (!echartsLib || !chartRef.current) return;
 
-        // Wait a bit for echarts to be fully loaded
-        const timer = setTimeout(() => {
-            if (!chartRef.current || chartInstance.current) return;
-
+        // Dispose existing instance
+        if (chartInstance.current) {
             try {
-                chartInstance.current = echarts.init(chartRef.current, 'dark');
-                updateChart();
-            } catch (e) {
-                console.error('Failed to init chart:', e);
+                chartInstance.current.dispose();
+            } catch (e) { }
+        }
+
+        try {
+            chartInstance.current = echartsLib.init(chartRef.current, 'dark');
+            const option = buildOption();
+            if (option) {
+                chartInstance.current.setOption(option, true);
             }
-        }, 100);
+        } catch (e) {
+            console.error('Failed to init chart:', e);
+        }
 
         return () => {
-            clearTimeout(timer);
             if (chartInstance.current) {
                 try {
                     chartInstance.current.dispose();
@@ -64,27 +90,23 @@ export function Chart({
                 chartInstance.current = null;
             }
         };
-    }, [isClient]);
+    }, [echartsLib]);
 
     // Update chart when data changes
     useEffect(() => {
-        if (chartInstance.current && echarts) {
-            updateChart();
-        }
-    }, [data, type]);
-
-    const updateChart = () => {
-        if (!chartInstance.current) return;
-
-        try {
-            const option = buildOption();
-            if (option) {
-                chartInstance.current.setOption(option, true);
+        if (chartInstance.current && echartsLib) {
+            try {
+                const option = buildOption();
+                if (option) {
+                    chartInstance.current.setOption(option, true);
+                }
+            } catch (e) {
+                console.error('Failed to update chart:', e);
             }
-        } catch (e) {
-            console.error('Failed to update chart:', e);
         }
-    };
+    }, [data, type, echartsLib]);
+
+
 
     const buildOption = () => {
         const baseOption = {
@@ -167,15 +189,8 @@ export function Chart({
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    if (!isClient) {
-        return (
-            <div
-                className={cn('flex items-center justify-center bg-gray-800/50 rounded-lg', className)}
-                style={{ height }}
-            >
-                <div className="text-gray-500">Loading chart...</div>
-            </div>
-        );
+    if (!echartsLib || loading) {
+        return <ChartSkeleton height={height} type={type} />;
     }
 
     return (
