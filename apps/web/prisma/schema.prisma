@@ -69,9 +69,31 @@ model Page {
   categoryId  String?
   category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
+  // Page links (for backlinks feature)
+  outgoingLinks PageLink[] @relation("OutgoingLinks")
+  incomingLinks PageLink[] @relation("IncomingLinks")
+
   @@index([workspaceId])
   @@index([parentId])
   @@index([categoryId])
+}
+
+// PageLink - tracks links between pages for backlinks
+model PageLink {
+  id           String   @id @default(uuid())
+  createdAt    DateTime @default(now())
+  
+  // Source page (the page containing the link)
+  sourcePageId String
+  sourcePage   Page     @relation("OutgoingLinks", fields: [sourcePageId], references: [id], onDelete: Cascade)
+  
+  // Target page (the page being linked to)
+  targetPageId String
+  targetPage   Page     @relation("IncomingLinks", fields: [targetPageId], references: [id], onDelete: Cascade)
+  
+  @@unique([sourcePageId, targetPageId])
+  @@index([sourcePageId])
+  @@index([targetPageId])
 }
 
 // Block - a content unit within a page

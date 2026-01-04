@@ -4,6 +4,7 @@ import { pageRouter } from './routers/page';
 import { blockRouter } from './routers/block';
 import { databaseRouter } from './routers/database';
 import { categoryRouter } from './routers/category';
+import { pageLinkRouter } from './routers/pageLink';
 
 /**
  * This is the primary router for the app.
@@ -15,7 +16,9 @@ export const appRouter = createTRPCRouter({
     block: blockRouter,
     database: databaseRouter,
     category: categoryRouter,
+    pageLink: pageLinkRouter,
 });
 
 // Export type definition for client
 export type AppRouter = typeof appRouter;
+

@@ -16,9 +16,11 @@ import { common, createLowlight } from 'lowlight';
 import { useCallback, useEffect } from 'react';
 import { EditorToolbar } from './EditorToolbar';
 import { SlashCommands } from './SlashCommands';
+import { PageLinkSearch } from './PageLinkSearch';
 import { DatabaseNode } from './extensions/DatabaseNode';
 import { ChartNode } from './extensions/ChartNode';
 import { ColumnsNode, ColumnNode } from './extensions/ColumnsNode';
+import { PageLinkNode } from './extensions/PageLinkNode';
 
 const lowlight = createLowlight(common);
 
@@ -28,6 +30,7 @@ interface BlockEditorProps {
     editable?: boolean;
     placeholder?: string;
     pageId?: string;
+    workspaceId?: string;
 }
 
 export function BlockEditor({
@@ -36,6 +39,7 @@ export function BlockEditor({
     editable = true,
     placeholder = "Type '/' for commands...",
     pageId,
+    workspaceId,
 }: BlockEditorProps) {
     const editor = useEditor({
         extensions: [
@@ -73,6 +77,7 @@ export function BlockEditor({
             ChartNode,
             ColumnsNode,
             ColumnNode,
+            PageLinkNode,
         ],
         content: content || {
             type: 'doc',
@@ -125,7 +130,9 @@ export function BlockEditor({
         <div className="block-editor" onKeyDown={handleKeyDown}>
             {editable && <EditorToolbar editor={editor} />}
             {editable && <SlashCommands editor={editor} pageId={pageId} />}
+            {editable && workspaceId && <PageLinkSearch editor={editor} workspaceId={workspaceId} />}
             <EditorContent editor={editor} />
         </div>
     );
 }
+

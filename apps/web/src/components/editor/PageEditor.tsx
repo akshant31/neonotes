@@ -4,6 +4,8 @@ import { useEffect, useCallback, useState } from 'react';
 import { trpc } from '@/utils/trpc';
 import { BlockEditor } from '@/components/editor';
 import { CategorySelector } from '@/components/editor/CategorySelector';
+import { BacklinksPanel } from '@/components/editor/BacklinksPanel';
+import { extractPageLinkIds } from '@/components/editor/extensions/PageLinkNode';
 import { useAppStore } from '@/stores/app-store';
 import { debounce } from '@/lib/utils';
 import {
@@ -60,6 +62,9 @@ export function PageEditor() {
         onSettled: () => setIsSaving(false),
     });
 
+    // Sync page links mutation
+    const syncLinksMutation = trpc.pageLink.syncLinks.useMutation();
+
     // Delete page mutation
     const deletePageMutation = trpc.page.delete.useMutation({
         onSuccess: () => {
@@ -83,6 +88,37 @@ export function PageEditor() {
         setTitle(currentPage?.title || '');
         setIsEditMode(false); // Reset to read mode when page changes
     }, [currentPage?.id, currentPage?.title]);
+
+    // Listen for page link navigation events
+    useEffect(() => {
+        const handleNavigateToPage = async (event: Event) => {
+            const customEvent = event as CustomEvent<{ pageId: string }>;
+            const { pageId } = customEvent.detail;
+            // Fetch the page details and navigate
+            try {
+                const page = await utils.page.getById.fetch({ id: pageId });
+                if (page) {
+                    setCurrentPage({
+                        id: page.id,
+                        title: page.title,
+                        icon: page.icon,
+                        workspaceId: currentPage?.workspaceId || '',
+                        isFavorite: page.isFavorite,
+                        isArchived: page.isArchived,
+                        createdAt: page.createdAt,
+                        updatedAt: page.updatedAt,
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to navigate to page:', error);
+            }
+        };
+
+        window.addEventListener('navigate-to-page', handleNavigateToPage);
+        return () => {
+            window.removeEventListener('navigate-to-page', handleNavigateToPage);
+        };
+    }, [currentPage?.workspaceId, setCurrentPage, utils]);
 
     // Load content from page data
     useEffect(() => {
@@ -133,6 +169,13 @@ export function PageEditor() {
                     order: index,
                 }));
                 saveBlocksMutation.mutate({ pageId: currentPage.id, blocks });
+
+                // Extract and sync page links for backlinks
+                const linkedPageIds = extractPageLinkIds(newContent);
+                syncLinksMutation.mutate({
+                    sourcePageId: currentPage.id,
+                    targetPageIds: linkedPageIds,
+                });
             }
         }, 2000),
         [currentPage?.id]
@@ -351,8 +394,12 @@ export function PageEditor() {
                     onChange={handleContentChange}
                     placeholder="Type '/' for commands, or just start writing..."
                     pageId={currentPage.id}
+                    workspaceId={currentPage.workspaceId}
                     editable={isEditMode}
                 />
+
+                {/* Backlinks panel */}
+                <BacklinksPanel pageId={currentPage.id} />
             </div>
         </div>
     );
