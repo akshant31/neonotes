@@ -77,6 +77,7 @@ export const pageRouter = createTRPCRouter({
                 title: z.string().optional(),
                 icon: z.string().optional(),
                 coverImage: z.string().optional(),
+                background: z.string().nullable().optional(),
                 isFavorite: z.boolean().optional(),
                 isArchived: z.boolean().optional(),
                 categoryId: z.string().nullable().optional(),

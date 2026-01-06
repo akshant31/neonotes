@@ -37,7 +37,7 @@ export function PageEditor() {
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
     const [isEditMode, setIsEditMode] = useState(false);
     const [showBackgroundPicker, setShowBackgroundPicker] = useState(false);
-    const [pageBackground, setPageBackground] = useState('');
+    const [pageBackground, setPageBackground] = useState<string>((currentPage as any)?.background || '');
 
     // Fetch full page data with blocks
     const { data: pageData, isLoading, refetch } = trpc.page.getById.useQuery(
@@ -87,11 +87,12 @@ export function PageEditor() {
         }
     };
 
-    // Update title when page changes
+    // Update title and background when page changes
     useEffect(() => {
         setTitle(currentPage?.title || '');
+        setPageBackground((pageData as any)?.background || '');
         setIsEditMode(false); // Reset to read mode when page changes
-    }, [currentPage?.id, currentPage?.title]);
+    }, [currentPage?.id, currentPage?.title, pageData]);
 
     // Listen for page link navigation events
     useEffect(() => {
@@ -424,7 +425,13 @@ export function PageEditor() {
                 isOpen={showBackgroundPicker}
                 onClose={() => setShowBackgroundPicker(false)}
                 currentBackground={pageBackground}
-                onSelect={(bg) => setPageBackground(bg)}
+                onSelect={(bg) => {
+                    setPageBackground(bg);
+                    // Save to database
+                    if (currentPage) {
+                        updatePageMutation.mutate({ id: currentPage.id, background: bg || null });
+                    }
+                }}
             />
         </div>
     );

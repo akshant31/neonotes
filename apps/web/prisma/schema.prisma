@@ -45,6 +45,7 @@ model Page {
   title       String   @default("Untitled")
   icon        String?  // emoji or icon name
   coverImage  String?  // URL to cover image
+  background  String?  // CSS class for page background
   isArchived  Boolean  @default(false)
   isFavorite  Boolean  @default(false)
   createdAt   DateTime @default(now())
