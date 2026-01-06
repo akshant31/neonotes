@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type { Page, Workspace } from '@/types';
 
 interface AppState {
@@ -33,42 +34,54 @@ interface AppState {
     setSearchQuery: (query: string) => void;
 }
 
-export const useAppStore = create<AppState>((set) => ({
-    // Workspace
-    currentWorkspace: null,
-    setCurrentWorkspace: (workspace) => set({ currentWorkspace: workspace }),
+export const useAppStore = create<AppState>()(
+    persist(
+        (set) => ({
+            // Workspace
+            currentWorkspace: null,
+            setCurrentWorkspace: (workspace) => set({ currentWorkspace: workspace }),
 
-    // Pages
-    pages: [],
-    setPages: (pages) => set({ pages }),
-    addPage: (page) => set((state) => ({ pages: [...state.pages, page] })),
-    updatePage: (id, updates) => set((state) => ({
-        pages: state.pages.map((p) => (p.id === id ? { ...p, ...updates } : p)),
-        currentPage: state.currentPage?.id === id
-            ? { ...state.currentPage, ...updates }
-            : state.currentPage,
-    })),
-    deletePage: (id) => set((state) => ({
-        pages: state.pages.filter((p) => p.id !== id),
-        currentPage: state.currentPage?.id === id ? null : state.currentPage,
-    })),
+            // Pages
+            pages: [],
+            setPages: (pages) => set({ pages }),
+            addPage: (page) => set((state) => ({ pages: [...state.pages, page] })),
+            updatePage: (id, updates) => set((state) => ({
+                pages: state.pages.map((p) => (p.id === id ? { ...p, ...updates } : p)),
+                currentPage: state.currentPage?.id === id
+                    ? { ...state.currentPage, ...updates }
+                    : state.currentPage,
+            })),
+            deletePage: (id) => set((state) => ({
+                pages: state.pages.filter((p) => p.id !== id),
+                currentPage: state.currentPage?.id === id ? null : state.currentPage,
+            })),
 
-    // Current page
-    currentPage: null,
-    setCurrentPage: (page) => set({ currentPage: page }),
+            // Current page
+            currentPage: null,
+            setCurrentPage: (page) => set({ currentPage: page }),
 
-    // Sidebar
-    isSidebarOpen: true,
-    toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
-    setSidebarOpen: (open) => set({ isSidebarOpen: open }),
+            // Sidebar
+            isSidebarOpen: true,
+            toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
+            setSidebarOpen: (open) => set({ isSidebarOpen: open }),
 
-    // Theme
-    theme: 'system',
-    setTheme: (theme) => set({ theme }),
+            // Theme
+            theme: 'system',
+            setTheme: (theme) => set({ theme }),
 
-    // Search
-    isSearchOpen: false,
-    setSearchOpen: (open) => set({ isSearchOpen: open }),
-    searchQuery: '',
-    setSearchQuery: (query) => set({ searchQuery: query }),
-}));
+            // Search
+            isSearchOpen: false,
+            setSearchOpen: (open) => set({ isSearchOpen: open }),
+            searchQuery: '',
+            setSearchQuery: (query) => set({ searchQuery: query }),
+        }),
+        {
+            name: 'neonotes-storage',
+            partialize: (state) => ({
+                theme: state.theme,
+                isSidebarOpen: state.isSidebarOpen,
+            }),
+        }
+    )
+);
+

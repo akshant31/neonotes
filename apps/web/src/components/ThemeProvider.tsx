@@ -22,8 +22,16 @@ const ThemeContext = createContext<{
 export function ThemeProvider({ children }: ThemeProviderProps) {
     const { theme, setTheme } = useAppStore();
     const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('dark');
+    const [mounted, setMounted] = useState(false);
+
+    // Mark as mounted to prevent hydration mismatch
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     useEffect(() => {
+        if (!mounted) return;
+
         // Get the resolved theme
         const getResolvedTheme = (): 'light' | 'dark' => {
             if (theme === 'system') {
@@ -61,20 +69,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
         mediaQuery.addEventListener('change', handleChange);
         return () => mediaQuery.removeEventListener('change', handleChange);
-    }, [theme]);
-
-    // Persist to localStorage
-    useEffect(() => {
-        localStorage.setItem('neonotes-theme', theme);
-    }, [theme]);
-
-    // Load from localStorage on mount
-    useEffect(() => {
-        const saved = localStorage.getItem('neonotes-theme') as Theme | null;
-        if (saved && ['light', 'dark', 'system'].includes(saved)) {
-            setTheme(saved);
-        }
-    }, [setTheme]);
+    }, [theme, mounted]);
 
     return (
         <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>
@@ -84,3 +79,4 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 }
 
 export const useTheme = () => useContext(ThemeContext);
+
