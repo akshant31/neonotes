@@ -216,7 +216,10 @@ export function ColumnHeader({ column, onUpdate, onDelete, workspaceId: workspac
                     ) : (
                         <div className="mb-3">
                             <div className="text-xs font-medium text-gray-500 mb-1 px-1">Type</div>
-                            <div className="space-y-0.5 max-h-48 overflow-y-auto">
+                            <div
+                                className="space-y-0.5"
+                                style={{ maxHeight: '200px', overflowY: 'scroll' }}
+                            >
                                 {COLUMN_TYPES.map((type) => (
                                     <button
                                         key={type.value}
