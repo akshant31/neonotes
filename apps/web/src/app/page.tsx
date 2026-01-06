@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Sidebar, SearchModal } from '@/components/layout';
 import { PageEditor } from '@/components/editor';
 import { Chart, StatCard, StatGrid } from '@/components/visualization';
@@ -184,7 +185,36 @@ function Dashboard() {
 }
 
 export default function Home() {
-  const { currentPage, isSearchOpen, setSearchOpen } = useAppStore();
+  const { currentPage, setCurrentPage, isSearchOpen, setSearchOpen } = useAppStore();
+  const utils = trpc.useUtils();
+
+  // Restore page from URL hash on mount
+  useEffect(() => {
+    const pageId = window.location.hash.replace('#page=', '');
+    if (pageId && !currentPage) {
+      // Fetch the page by ID and set it
+      utils.page.getById.fetch({ id: pageId }).then((page) => {
+        if (page) {
+          setCurrentPage(page as any);
+        }
+      }).catch(() => {
+        // Page not found, clear hash
+        window.history.replaceState(null, '', window.location.pathname);
+      });
+    }
+  }, []);
+
+  // Sync current page to URL hash
+  useEffect(() => {
+    if (currentPage) {
+      window.history.replaceState(null, '', `#page=${currentPage.id}`);
+    } else {
+      // Clear hash when going to dashboard
+      if (window.location.hash) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    }
+  }, [currentPage]);
 
   return (
     <div className="flex h-screen bg-gray-950 text-gray-100">
@@ -201,3 +231,4 @@ export default function Home() {
     </div>
   );
 }
+
