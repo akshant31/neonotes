@@ -52,8 +52,8 @@ export function TableView({ database, workspaceId }: TableViewProps) {
 
     const updateCellMutation = trpc.database.updateCell.useMutation({
         onSuccess: () => {
-            // Optimistic update handles the UI, but we invalidate to ensure consistency
-            // utils.database.getById.invalidate({ id: database.id });
+            // Invalidate to refresh the UI after cell update
+            utils.database.getById.invalidate({ id: database.id });
         },
     });
 
