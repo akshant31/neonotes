@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 import { trpc } from '@/utils/trpc';
 import type { Database, DatabaseColumn, DatabaseRow, DatabaseCell } from '@prisma/client';
@@ -16,8 +16,11 @@ import { EmailCell } from './cells/EmailCell';
 import { PhoneCell } from './cells/PhoneCell';
 import { TimestampCell } from './cells/TimestampCell';
 import { PersonCell } from './cells/PersonCell';
-import { FormulaCell } from './cells/FormulaCell';
+import { FormulaCell, evaluateFormula } from './cells/FormulaCell';
+import { RollupCell } from './cells/RollupCell';
 import { ColumnHeader } from './ColumnHeader';
+import { FormulaConfigModal } from './FormulaConfigModal';
+import { RollupConfigModal } from './RollupConfigModal';
 
 type FullDatabase = Database & {
     columns: DatabaseColumn[];
@@ -33,6 +36,8 @@ interface TableViewProps {
 export function TableView({ database, workspaceId }: TableViewProps) {
     const utils = trpc.useUtils();
     const [colWidths, setColWidths] = useState<Record<string, number>>({});
+    const [formulaModalCol, setFormulaModalCol] = useState<DatabaseColumn | null>(null);
+    const [rollupModalCol, setRollupModalCol] = useState<DatabaseColumn | null>(null);
 
     useEffect(() => {
         const widths: Record<string, number> = {};
@@ -189,10 +194,28 @@ export function TableView({ database, workspaceId }: TableViewProps) {
                 return <PersonCell value="User" type="createdBy" />;
             case 'lastEditedBy':
                 return <PersonCell value="User" type="lastEditedBy" />;
-            case 'formula':
-                return <FormulaCell value={cell?.value as string | null} formula={(col.options as any)?.formula} />;
-            case 'rollup':
-                return <FormulaCell value={cell?.value as string | null} formula="Rollup" />;
+            case 'formula': {
+                const formula = (col.options as any)?.formula || '';
+                const columnsInfo = database.columns.map(c => ({ id: c.id, name: c.name, type: c.type }));
+                const computedValue = formula ? evaluateFormula(formula, row, columnsInfo) : null;
+                return (
+                    <FormulaCell
+                        value={cell?.value as string | null}
+                        formula={formula}
+                        computedValue={computedValue}
+                        onConfigClick={() => setFormulaModalCol(col)}
+                    />
+                );
+            }
+            case 'rollup': {
+                const rollupConfig = (col.options as any) || {};
+                return (
+                    <RollupCell
+                        value={cell?.value as string | number | null}
+                        config={rollupConfig}
+                    />
+                );
+            }
             case 'files':
                 return (
                     <TextCell
@@ -296,6 +319,43 @@ export function TableView({ database, workspaceId }: TableViewProps) {
                     </tr>
                 </tbody>
             </table>
+
+            {/* Formula Config Modal */}
+            <FormulaConfigModal
+                isOpen={!!formulaModalCol}
+                onClose={() => setFormulaModalCol(null)}
+                formula={(formulaModalCol?.options as any)?.formula || ''}
+                columns={database.columns.map(c => ({ id: c.id, name: c.name, type: c.type }))}
+                onSave={(formula) => {
+                    if (formulaModalCol) {
+                        handleColumnUpdate(formulaModalCol.id, {
+                            options: { ...((formulaModalCol.options as any) || {}), formula }
+                        });
+                    }
+                    setFormulaModalCol(null);
+                }}
+            />
+
+            {/* Rollup Config Modal */}
+            <RollupConfigModal
+                isOpen={!!rollupModalCol}
+                onClose={() => setRollupModalCol(null)}
+                config={(rollupModalCol?.options as any) || {}}
+                columns={database.columns.map(c => ({
+                    id: c.id,
+                    name: c.name,
+                    type: c.type,
+                    options: c.options as any
+                }))}
+                onSave={(config) => {
+                    if (rollupModalCol) {
+                        handleColumnUpdate(rollupModalCol.id, {
+                            options: { ...((rollupModalCol.options as any) || {}), ...config }
+                        });
+                    }
+                    setRollupModalCol(null);
+                }}
+            />
         </div>
     );
 }
