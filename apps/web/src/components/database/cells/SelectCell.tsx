@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { ChevronDown, Plus } from 'lucide-react';
+import { Plus, X, Tag } from 'lucide-react';
 
 export interface SelectOption {
     id: string;
@@ -31,20 +31,15 @@ const COLORS = [
 export function SelectCell({ value, options = [], onUpdate, onCreateOption }: SelectCellProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState('');
-    const containerRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
 
     const selectedOption = options.find((opt) => opt.id === value || opt.label === value);
 
     useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-            }
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+        if (isOpen && inputRef.current) {
+            inputRef.current.focus();
+        }
+    }, [isOpen]);
 
     const filteredOptions = options.filter(opt =>
         opt.label.toLowerCase().includes(search.toLowerCase())
@@ -60,8 +55,6 @@ export function SelectCell({ value, options = [], onUpdate, onCreateOption }: Se
         if (onCreateOption && search) {
             onCreateOption(search);
             setSearch('');
-            // The parent should handle selecting the new option after creation if desired
-            // For now we just close or keep open? Let's keep open to see the new option.
         }
     };
 
@@ -73,80 +66,128 @@ export function SelectCell({ value, options = [], onUpdate, onCreateOption }: Se
                 handleCreate();
             }
         }
+        if (e.key === 'Escape') {
+            setIsOpen(false);
+            setSearch('');
+        }
     };
 
     return (
-        <div ref={containerRef} className="relative w-full h-full">
+        <>
             <div
-                className="w-full h-full px-2 py-1 flex items-center cursor-pointer group"
-                onClick={() => setIsOpen(!isOpen)}
+                className="w-full h-full px-2 py-1 flex items-center cursor-pointer group min-h-[32px]"
+                onClick={() => setIsOpen(true)}
             >
                 {selectedOption ? (
                     <span className={cn("px-2 py-0.5 rounded text-xs truncate", selectedOption.color)}>
                         {selectedOption.label}
                     </span>
                 ) : (
-                    <span className="text-gray-400 italic text-sm opacity-0 group-hover:opacity-50">Empty</span>
+                    <span className="text-gray-400 text-sm">Select option</span>
                 )}
-                {/* <ChevronDown className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-50" /> */}
             </div>
 
+            {/* Modal Overlay */}
             {isOpen && (
-                <div className="absolute top-full left-0 z-50 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl mt-1 overflow-hidden">
-                    <input
-                        autoFocus
-                        type="text"
-                        className="w-full px-3 py-2 text-sm border-b border-gray-100 dark:border-gray-700 bg-transparent outline-none"
-                        placeholder="Search or create..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                    />
-                    <div className="max-h-48 overflow-y-auto p-1">
-                        {filteredOptions.length > 0 ? (
-                            filteredOptions.map((option) => (
-                                <div
-                                    key={option.id}
-                                    className="px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-sm cursor-pointer flex items-center"
-                                    onClick={() => handleSelect(option.id)}
-                                >
-                                    <span className={cn("px-2 py-0.5 rounded text-xs", option.color)}>
-                                        {option.label}
-                                    </span>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="px-2 py-3 text-xs text-center text-gray-500">
-                                {search ? (
-                                    <button
-                                        className="flex items-center justify-center gap-1 w-full hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded text-blue-500"
-                                        onClick={handleCreate}
-                                    >
-                                        <Plus className="w-3 h-3" />
-                                        Create &quot;{search}&quot;
-                                    </button>
-                                ) : (
-                                    "No options found"
-                                )}
+                <div
+                    className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center"
+                    onClick={() => { setIsOpen(false); setSearch(''); }}
+                >
+                    <div
+                        className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-[400px] max-h-[80vh] overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                            <div className="flex items-center gap-2">
+                                <Tag className="w-5 h-5 text-gray-400" />
+                                <h3 className="font-semibold text-gray-900 dark:text-gray-100">Select Option</h3>
                             </div>
-                        )}
-                        {/* Allow clearing selection */}
-                        {value && (
-                            <div
-                                className="mt-1 border-t border-gray-100 dark:border-gray-700 px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-xs cursor-pointer text-gray-500"
-                                onClick={() => handleSelect('')} // Empty string or null to clear
+                            <button
+                                onClick={() => { setIsOpen(false); setSearch(''); }}
+                                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
                             >
-                                Clear selection
-                            </div>
-                        )}
+                                <X className="w-5 h-5 text-gray-500" />
+                            </button>
+                        </div>
 
+                        {/* Search Input */}
+                        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 outline-none focus:border-blue-500"
+                                placeholder="Search or type to create..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                            />
+                        </div>
+
+                        {/* Options List */}
+                        <div className="p-3 max-h-[50vh] overflow-y-auto">
+                            {/* Current Selection */}
+                            {selectedOption && (
+                                <div className="mb-3 pb-3 border-b border-gray-100 dark:border-gray-800">
+                                    <div className="text-xs font-medium text-gray-500 mb-2 px-1">Current</div>
+                                    <div className="flex items-center justify-between px-3 py-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                                        <span className={cn("px-2 py-0.5 rounded text-xs", selectedOption.color)}>
+                                            {selectedOption.label}
+                                        </span>
+                                        <button
+                                            onClick={() => handleSelect('')}
+                                            className="text-xs text-gray-500 hover:text-red-500"
+                                        >
+                                            Clear
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Options */}
+                            {filteredOptions.length > 0 ? (
+                                <div className="space-y-1">
+                                    {filteredOptions.map((option) => (
+                                        <button
+                                            key={option.id}
+                                            className={cn(
+                                                "w-full flex items-center px-3 py-2.5 rounded-lg text-left transition-colors",
+                                                option.id === value
+                                                    ? "bg-blue-50 dark:bg-blue-900/20"
+                                                    : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                                            )}
+                                            onClick={() => handleSelect(option.id)}
+                                        >
+                                            <span className={cn("px-3 py-1 rounded text-sm", option.color)}>
+                                                {option.label}
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+                            ) : search ? (
+                                <button
+                                    className="w-full flex items-center justify-center gap-2 px-3 py-4 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                                    onClick={handleCreate}
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    <span>Create "{search}"</span>
+                                </button>
+                            ) : (
+                                <div className="text-center py-8 text-gray-500">
+                                    <Tag className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                                    <p className="text-sm">No options yet</p>
+                                    <p className="text-xs mt-1">Type to create a new option</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
-        </div>
+        </>
     );
 }
 
 export function getRandomColor() {
     return COLORS[Math.floor(Math.random() * COLORS.length)];
 }
+
