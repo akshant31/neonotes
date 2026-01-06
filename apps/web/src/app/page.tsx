@@ -57,10 +57,10 @@ function Dashboard() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-100 mb-2">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
             Welcome back! 👋
           </h1>
-          <p className="text-gray-400">
+          <p className="text-gray-600 dark:text-gray-400">
             Here&apos;s what&apos;s happening with your notes today.
           </p>
         </div>
@@ -99,8 +99,8 @@ function Dashboard() {
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-          <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-            <h3 className="text-lg font-semibold mb-4">Weekly Activity</h3>
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-6 border border-gray-200 dark:border-gray-800">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Weekly Activity</h3>
             <Chart
               type="line"
               data={{
@@ -110,8 +110,8 @@ function Dashboard() {
               height={250}
             />
           </div>
-          <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-            <h3 className="text-lg font-semibold mb-4">Notes by Category</h3>
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-6 border border-gray-200 dark:border-gray-800">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Notes by Category</h3>
             <Chart
               type="pie"
               data={{ series: categoryData }}
@@ -121,9 +121,9 @@ function Dashboard() {
         </div>
 
         {/* Recent Pages */}
-        <div className="mt-8 bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <div className="mt-8 bg-white dark:bg-gray-900 rounded-xl p-6 border border-gray-200 dark:border-gray-800">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Recent Pages</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Recent Pages</h3>
             <button
               onClick={handleCreatePage}
               disabled={createPageMutation.isLoading}
@@ -148,11 +148,11 @@ function Dashboard() {
                 <button
                   key={page.id}
                   onClick={() => setCurrentPage(page as any)}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors text-left"
+                  className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left"
                 >
                   <span className="text-xl">{page.icon || '📄'}</span>
                   <div className="flex-1">
-                    <p className="font-medium text-gray-200">{page.title || 'Untitled'}</p>
+                    <p className="font-medium text-gray-800 dark:text-gray-200">{page.title || 'Untitled'}</p>
                     <p className="text-sm text-gray-500">
                       Updated {new Date(page.updatedAt).toLocaleDateString()}
                     </p>
@@ -217,7 +217,7 @@ export default function Home() {
   }, [currentPage]);
 
   return (
-    <div className="flex h-screen bg-gray-950 text-gray-100">
+    <div className="flex h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
       {/* Sidebar */}
       <Sidebar />
 
