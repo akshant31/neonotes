@@ -77,7 +77,8 @@ export function TableView({ database, workspaceId }: TableViewProps) {
     const handleColumnUpdate = (columnId: string, updates: Partial<DatabaseColumn>) => {
         updateColumnMutation.mutate({
             id: columnId,
-            ...updates
+            ...updates,
+            options: updates.options as Record<string, unknown> | undefined,
         });
     };
 
