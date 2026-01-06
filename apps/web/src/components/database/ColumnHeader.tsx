@@ -169,7 +169,7 @@ export function ColumnHeader({ column, onUpdate, onDelete, workspaceId: workspac
 
             {/* Dropdown Menu */}
             {isOpen && (
-                <div className="absolute top-full left-0 z-50 w-64 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl mt-1 p-2 max-h-80 overflow-y-auto">
+                <div className="absolute top-full left-0 z-50 w-64 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl mt-1 p-2">
 
                     {/* Rename Input */}
                     <div className="mb-3">
