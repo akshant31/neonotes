@@ -2,6 +2,61 @@ import { z } from 'zod';
 import { createTRPCRouter, publicProcedure } from '../trpc';
 
 export const databaseRouter = createTRPCRouter({
+    // Get all databases in a workspace (for relation column picker)
+    listAll: publicProcedure
+        .input(z.object({ workspaceId: z.string() }))
+        .query(async ({ ctx, input }) => {
+            // Get all pages in the workspace, then get their databases
+            const pages = await ctx.prisma.page.findMany({
+                where: { workspaceId: input.workspaceId, isArchived: false },
+                select: { id: true },
+            });
+
+            return ctx.prisma.database.findMany({
+                where: { pageId: { in: pages.map(p => p.id) } },
+                select: {
+                    id: true,
+                    name: true,
+                    pageId: true,
+                },
+                orderBy: { name: 'asc' },
+            });
+        }),
+
+    // Get rows for relation cell picker (with display value)
+    getRowsForRelation: publicProcedure
+        .input(z.object({ databaseId: z.string(), searchQuery: z.string().optional() }))
+        .query(async ({ ctx, input }) => {
+            const database = await ctx.prisma.database.findUnique({
+                where: { id: input.databaseId },
+                include: {
+                    columns: { orderBy: { order: 'asc' }, take: 1 }, // Get first column for display
+                    rows: {
+                        include: {
+                            cells: true,
+                        },
+                    },
+                },
+            });
+
+            if (!database) return [];
+
+            // Get the first column (usually the title/name column)
+            const displayColumn = database.columns[0];
+
+            return database.rows.map(row => {
+                const displayCell = row.cells.find(c => c.columnId === displayColumn?.id);
+                const displayValue = displayCell?.value as string || 'Untitled';
+                return {
+                    id: row.id,
+                    displayValue,
+                };
+            }).filter(row => {
+                if (!input.searchQuery) return true;
+                return row.displayValue.toLowerCase().includes(input.searchQuery.toLowerCase());
+            });
+        }),
+
     // Get all databases for a page
     listByPage: publicProcedure
         .input(z.object({ pageId: z.string() }))

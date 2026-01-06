@@ -40,7 +40,7 @@ interface Command {
 
 
 
-export function SlashCommands({ editor, pageId }: SlashCommandsProps & { pageId?: string }) {
+export function SlashCommands({ editor, pageId, workspaceId }: SlashCommandsProps & { pageId?: string; workspaceId?: string }) {
     const [isOpen, setIsOpen] = useState(false);
     const [query, setQuery] = useState('');
     const [selectedIndex, setSelectedIndex] = useState(0);
@@ -166,7 +166,8 @@ export function SlashCommands({ editor, pageId }: SlashCommandsProps & { pageId?
                         editor.chain().focus().insertContent({
                             type: 'database',
                             attrs: {
-                                databaseId: database.id
+                                databaseId: database.id,
+                                workspaceId: workspaceId
                             }
                         }).run();
                     }

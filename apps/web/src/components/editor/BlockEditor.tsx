@@ -129,7 +129,7 @@ export function BlockEditor({
     return (
         <div className="block-editor" onKeyDown={handleKeyDown}>
             {editable && <EditorToolbar editor={editor} />}
-            {editable && <SlashCommands editor={editor} pageId={pageId} />}
+            {editable && <SlashCommands editor={editor} pageId={pageId} workspaceId={workspaceId} />}
             {editable && workspaceId && <PageLinkSearch editor={editor} workspaceId={workspaceId} />}
             <EditorContent editor={editor} />
         </div>

@@ -14,6 +14,9 @@ export const DatabaseNode = Node.create({
             databaseId: {
                 default: null,
             },
+            workspaceId: {
+                default: null,
+            },
         };
     },
 
@@ -33,9 +36,13 @@ export const DatabaseNode = Node.create({
         return ReactNodeViewRenderer(({ node }) => {
             return (
                 <NodeViewWrapper className="my-4">
-                    <DatabaseView databaseId={node.attrs.databaseId} />
+                    <DatabaseView
+                        databaseId={node.attrs.databaseId}
+                        workspaceId={node.attrs.workspaceId}
+                    />
                 </NodeViewWrapper>
             );
         });
     },
 });
+

@@ -10,6 +10,7 @@ import { NumberCell } from './cells/NumberCell';
 import { CheckboxCell } from './cells/CheckboxCell';
 import { DateCell } from './cells/DateCell';
 import { SelectCell, getRandomColor } from './cells/SelectCell';
+import { RelationCell } from './cells/RelationCell';
 import { ColumnHeader } from './ColumnHeader';
 
 type FullDatabase = Database & {
@@ -18,9 +19,12 @@ type FullDatabase = Database & {
     views: unknown[];
 };
 
+interface TableViewProps {
+    database: FullDatabase;
+    workspaceId?: string;
+}
 
-
-export function TableView({ database }: { database: FullDatabase }) {
+export function TableView({ database, workspaceId }: TableViewProps) {
     const utils = trpc.useUtils();
     const [colWidths, setColWidths] = useState<Record<string, number>>({});
 
@@ -111,6 +115,8 @@ export function TableView({ database }: { database: FullDatabase }) {
                                     column={col}
                                     onUpdate={(updates) => handleColumnUpdate(col.id, updates)}
                                     onDelete={() => handleColumnDelete(col.id)}
+                                    workspaceId={workspaceId}
+                                    currentDatabaseId={database.id}
                                 />
                                 <div
                                     className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -197,6 +203,16 @@ export function TableView({ database }: { database: FullDatabase }) {
                                                 options={options}
                                                 onUpdate={(val) => handleCellUpdate(row.id, col.id, val)}
                                                 onCreateOption={(label) => handleOptionCreate(col, label)}
+                                            />
+                                        );
+                                        break;
+                                    case 'relation':
+                                        const relatedDbId = (col.options as any)?.relatedDatabaseId;
+                                        CellComponent = (
+                                            <RelationCell
+                                                value={cell?.value as string[] | null}
+                                                relatedDatabaseId={relatedDbId}
+                                                onUpdate={(val) => handleCellUpdate(row.id, col.id, val)}
                                             />
                                         );
                                         break;
