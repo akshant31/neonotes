@@ -4,13 +4,19 @@ import { useState, useRef, useEffect } from 'react';
 
 import { trpc } from '@/utils/trpc';
 import type { Database, DatabaseColumn, DatabaseRow, DatabaseCell } from '@prisma/client';
-import { Plus, Type, Hash, List, Calendar, CheckSquare } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { TextCell } from './cells/TextCell';
 import { NumberCell } from './cells/NumberCell';
 import { CheckboxCell } from './cells/CheckboxCell';
 import { DateCell } from './cells/DateCell';
 import { SelectCell, getRandomColor } from './cells/SelectCell';
 import { RelationCell } from './cells/RelationCell';
+import { UrlCell } from './cells/UrlCell';
+import { EmailCell } from './cells/EmailCell';
+import { PhoneCell } from './cells/PhoneCell';
+import { TimestampCell } from './cells/TimestampCell';
+import { PersonCell } from './cells/PersonCell';
+import { FormulaCell } from './cells/FormulaCell';
 import { ColumnHeader } from './ColumnHeader';
 
 type FullDatabase = Database & {
@@ -100,6 +106,110 @@ export function TableView({ database, workspaceId }: TableViewProps) {
         });
     };
 
+    const renderCell = (row: DatabaseRow & { cells: DatabaseCell[] }, col: DatabaseColumn) => {
+        const cell = row.cells.find((c) => c.columnId === col.id);
+
+        switch (col.type) {
+            case 'text':
+                return (
+                    <TextCell
+                        value={cell?.value as string}
+                        onUpdate={(val) => handleCellUpdate(row.id, col.id, val)}
+                    />
+                );
+            case 'number':
+                return (
+                    <NumberCell
+                        value={cell?.value as number | null}
+                        onUpdate={(val) => handleCellUpdate(row.id, col.id, val)}
+                    />
+                );
+            case 'checkbox':
+                return (
+                    <CheckboxCell
+                        value={cell?.value as boolean | null}
+                        onUpdate={(val) => handleCellUpdate(row.id, col.id, val)}
+                    />
+                );
+            case 'date':
+                return (
+                    <DateCell
+                        value={cell?.value as string | null}
+                        onUpdate={(val) => handleCellUpdate(row.id, col.id, val)}
+                    />
+                );
+            case 'select':
+            case 'multiSelect':
+                const options = (col.options as any)?.options || [];
+                return (
+                    <SelectCell
+                        value={cell?.value as string | null}
+                        options={options}
+                        onUpdate={(val) => handleCellUpdate(row.id, col.id, val)}
+                        onCreateOption={(label) => handleOptionCreate(col, label)}
+                    />
+                );
+            case 'relation':
+                const relatedDbId = (col.options as any)?.relatedDatabaseId;
+                return (
+                    <RelationCell
+                        value={cell?.value as string[] | null}
+                        relatedDatabaseId={relatedDbId || ''}
+                        onUpdate={(val) => handleCellUpdate(row.id, col.id, val)}
+                    />
+                );
+            case 'url':
+                return (
+                    <UrlCell
+                        value={cell?.value as string | null}
+                        onUpdate={(val) => handleCellUpdate(row.id, col.id, val)}
+                    />
+                );
+            case 'email':
+                return (
+                    <EmailCell
+                        value={cell?.value as string | null}
+                        onUpdate={(val) => handleCellUpdate(row.id, col.id, val)}
+                    />
+                );
+            case 'phone':
+                return (
+                    <PhoneCell
+                        value={cell?.value as string | null}
+                        onUpdate={(val) => handleCellUpdate(row.id, col.id, val)}
+                    />
+                );
+            case 'createdTime':
+                return <TimestampCell value={row.createdAt} type="createdTime" />;
+            case 'lastEditedTime':
+                return <TimestampCell value={row.updatedAt} type="lastEditedTime" />;
+            case 'person':
+                return <PersonCell value={cell?.value as string | null} type="person" />;
+            case 'createdBy':
+                return <PersonCell value="User" type="createdBy" />;
+            case 'lastEditedBy':
+                return <PersonCell value="User" type="lastEditedBy" />;
+            case 'formula':
+                return <FormulaCell value={cell?.value as string | null} formula={(col.options as any)?.formula} />;
+            case 'rollup':
+                return <FormulaCell value={cell?.value as string | null} formula="Rollup" />;
+            case 'files':
+                return (
+                    <TextCell
+                        value={cell?.value as string || ''}
+                        onUpdate={(val) => handleCellUpdate(row.id, col.id, val)}
+                    />
+                );
+            default:
+                return (
+                    <TextCell
+                        value={cell?.value as string}
+                        onUpdate={(val) => handleCellUpdate(row.id, col.id, val)}
+                    />
+                );
+        }
+    };
+
     return (
         <div className="w-full overflow-x-auto pb-2">
             <table className="min-w-full border-collapse text-sm">
@@ -157,83 +267,14 @@ export function TableView({ database, workspaceId }: TableViewProps) {
                 <tbody className="bg-white dark:bg-gray-900">
                     {database.rows.map((row) => (
                         <tr key={row.id} className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/20">
-                            {database.columns.map((col) => {
-                                const cell = row.cells.find((c) => c.columnId === col.id);
-                                let CellComponent;
-
-                                switch (col.type) {
-                                    case 'text':
-                                        CellComponent = (
-                                            <TextCell
-                                                value={cell?.value as string}
-                                                onUpdate={(val) => handleCellUpdate(row.id, col.id, val)}
-                                            />
-                                        );
-                                        break;
-                                    case 'number':
-                                        CellComponent = ( // @ts-ignore
-                                            <NumberCell
-                                                value={cell?.value as number | null}
-                                                onUpdate={(val) => handleCellUpdate(row.id, col.id, val)}
-                                            />
-                                        );
-                                        break;
-                                    case 'checkbox':
-                                        CellComponent = ( // @ts-ignore
-                                            <CheckboxCell
-                                                value={cell?.value as boolean | null}
-                                                onUpdate={(val) => handleCellUpdate(row.id, col.id, val)}
-                                            />
-                                        );
-                                        break;
-                                    case 'date':
-                                        CellComponent = ( // @ts-ignore
-                                            <DateCell
-                                                value={cell?.value as string | null}
-                                                onUpdate={(val) => handleCellUpdate(row.id, col.id, val)}
-                                            />
-                                        );
-                                        break;
-                                    case 'select':
-                                    case 'multiSelect': // Reuse SelectCell for now, maybe need MultiSelect later
-                                        const options = (col.options as any)?.options || [];
-                                        CellComponent = ( // @ts-ignore
-                                            <SelectCell
-                                                value={cell?.value as string | null}
-                                                options={options}
-                                                onUpdate={(val) => handleCellUpdate(row.id, col.id, val)}
-                                                onCreateOption={(label) => handleOptionCreate(col, label)}
-                                            />
-                                        );
-                                        break;
-                                    case 'relation':
-                                        const relatedDbId = (col.options as any)?.relatedDatabaseId;
-                                        CellComponent = (
-                                            <RelationCell
-                                                value={cell?.value as string[] | null}
-                                                relatedDatabaseId={relatedDbId}
-                                                onUpdate={(val) => handleCellUpdate(row.id, col.id, val)}
-                                            />
-                                        );
-                                        break;
-                                    default:
-                                        CellComponent = (
-                                            <TextCell
-                                                value={cell?.value as string}
-                                                onUpdate={(val) => handleCellUpdate(row.id, col.id, val)}
-                                            />
-                                        );
-                                }
-
-                                return (
-                                    <td
-                                        key={`${row.id}-${col.id}`}
-                                        className="border-b border-r border-gray-200 dark:border-gray-800 p-0 h-9 first:border-l relative"
-                                    >
-                                        {CellComponent}
-                                    </td>
-                                );
-                            })}
+                            {database.columns.map((col) => (
+                                <td
+                                    key={`${row.id}-${col.id}`}
+                                    className="border-b border-r border-gray-200 dark:border-gray-800 p-0 h-9 first:border-l relative"
+                                >
+                                    {renderCell(row, col)}
+                                </td>
+                            ))}
                             <td className="border-b border-r border-gray-200 dark:border-gray-800 p-0"></td>
                         </tr>
                     ))}
@@ -258,3 +299,4 @@ export function TableView({ database, workspaceId }: TableViewProps) {
         </div>
     );
 }
+

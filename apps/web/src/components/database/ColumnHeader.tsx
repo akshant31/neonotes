@@ -5,7 +5,8 @@ import type { DatabaseColumn } from '@prisma/client';
 import { trpc } from '@/utils/trpc';
 import {
     Type, Hash, List, Calendar, CheckSquare, Link2,
-    MoreVertical, Trash, ArrowUp, ArrowDown, Database
+    MoreVertical, Trash, Database, Link, Mail, Phone,
+    User, FileText, Clock, UserCircle, Calculator, Sigma
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -16,7 +17,18 @@ export const COLUMN_ICONS: Record<string, React.ReactNode> = {
     multiSelect: <List className="w-3 h-3" />,
     date: <Calendar className="w-3 h-3" />,
     checkbox: <CheckSquare className="w-3 h-3" />,
+    url: <Link className="w-3 h-3" />,
+    email: <Mail className="w-3 h-3" />,
+    phone: <Phone className="w-3 h-3" />,
+    person: <User className="w-3 h-3" />,
+    files: <FileText className="w-3 h-3" />,
     relation: <Link2 className="w-3 h-3" />,
+    rollup: <Sigma className="w-3 h-3" />,
+    formula: <Calculator className="w-3 h-3" />,
+    createdTime: <Clock className="w-3 h-3" />,
+    createdBy: <UserCircle className="w-3 h-3" />,
+    lastEditedTime: <Clock className="w-3 h-3" />,
+    lastEditedBy: <UserCircle className="w-3 h-3" />,
 };
 
 const COLUMN_TYPES = [
@@ -26,7 +38,18 @@ const COLUMN_TYPES = [
     { value: 'multiSelect', label: 'Multi-select', icon: List },
     { value: 'date', label: 'Date', icon: Calendar },
     { value: 'checkbox', label: 'Checkbox', icon: CheckSquare },
+    { value: 'url', label: 'URL', icon: Link },
+    { value: 'email', label: 'Email', icon: Mail },
+    { value: 'phone', label: 'Phone', icon: Phone },
+    { value: 'person', label: 'Person', icon: User },
+    { value: 'files', label: 'Files & media', icon: FileText },
     { value: 'relation', label: 'Relation', icon: Link2 },
+    { value: 'rollup', label: 'Rollup', icon: Sigma },
+    { value: 'formula', label: 'Formula', icon: Calculator },
+    { value: 'createdTime', label: 'Created time', icon: Clock },
+    { value: 'createdBy', label: 'Created by', icon: UserCircle },
+    { value: 'lastEditedTime', label: 'Last edited time', icon: Clock },
+    { value: 'lastEditedBy', label: 'Last edited by', icon: UserCircle },
 ];
 
 interface ColumnHeaderProps {
