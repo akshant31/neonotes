@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { TRPCProvider } from "@/utils/trpc";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -20,12 +21,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} dark`}>
-      <body className={`${inter.className} antialiased bg-gray-950 text-gray-100`}>
+    <html lang="en" className={`${inter.variable}`} suppressHydrationWarning>
+      <body className={`${inter.className} antialiased`} suppressHydrationWarning>
         <TRPCProvider>
-          {children}
+          <ThemeProvider>
+            {children}
+          </ThemeProvider>
         </TRPCProvider>
       </body>
     </html>
   );
 }
+

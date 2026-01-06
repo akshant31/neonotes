@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { trpc } from '@/utils/trpc';
 import { useAppStore } from '@/stores/app-store';
+import { useTheme } from '@/components/ThemeProvider';
 import { cn } from '@/lib/utils';
 import {
     ChevronRight,
@@ -19,6 +20,9 @@ import {
     PanelLeftClose,
     PanelLeft,
     Loader2,
+    Sun,
+    Moon,
+    Monitor,
 } from 'lucide-react';
 import type { Page } from '@/types';
 
@@ -298,7 +302,10 @@ export function Sidebar() {
             </div>
 
             {/* Footer */}
-            <div className="p-2 border-t border-gray-200 dark:border-gray-700 space-y-1">
+            <div className="p-2 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                {/* Theme Toggle */}
+                <ThemeToggle />
+
                 <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                     <Trash2 className="w-4 h-4" />
                     <span>Trash</span>
@@ -311,3 +318,49 @@ export function Sidebar() {
         </aside>
     );
 }
+
+function ThemeToggle() {
+    const { theme, setTheme } = useTheme();
+
+    return (
+        <div className="flex items-center gap-1 p-1 bg-gray-200 dark:bg-gray-800 rounded-lg">
+            <button
+                onClick={() => setTheme('light')}
+                className={cn(
+                    "flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-xs transition-colors",
+                    theme === 'light'
+                        ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                )}
+            >
+                <Sun className="w-3.5 h-3.5" />
+                Light
+            </button>
+            <button
+                onClick={() => setTheme('dark')}
+                className={cn(
+                    "flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-xs transition-colors",
+                    theme === 'dark'
+                        ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                )}
+            >
+                <Moon className="w-3.5 h-3.5" />
+                Dark
+            </button>
+            <button
+                onClick={() => setTheme('system')}
+                className={cn(
+                    "flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-xs transition-colors",
+                    theme === 'system'
+                        ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                )}
+            >
+                <Monitor className="w-3.5 h-3.5" />
+                Auto
+            </button>
+        </div>
+    );
+}
+
