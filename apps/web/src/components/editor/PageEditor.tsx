@@ -6,6 +6,7 @@ import { BlockEditor } from '@/components/editor';
 import { CategorySelector } from '@/components/editor/CategorySelector';
 import { BacklinksPanel } from '@/components/editor/BacklinksPanel';
 import { PageBackgroundPicker } from '@/components/editor/PageBackgroundPicker';
+import { CoverPicker } from '@/components/editor/CoverPicker';
 import { extractPageLinkIds } from '@/components/editor/extensions/PageLinkNode';
 import { useAppStore } from '@/stores/app-store';
 import { debounce, cn } from '@/lib/utils';
@@ -22,6 +23,7 @@ import {
     Check,
     Save,
     Palette,
+    X,
 } from 'lucide-react';
 
 // Emoji picker simple implementation
@@ -37,7 +39,9 @@ export function PageEditor() {
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
     const [isEditMode, setIsEditMode] = useState(false);
     const [showBackgroundPicker, setShowBackgroundPicker] = useState(false);
+    const [showCoverPicker, setShowCoverPicker] = useState(false);
     const [pageBackground, setPageBackground] = useState<string>((currentPage as any)?.background || '');
+    const [pageCover, setPageCover] = useState<string | null>((currentPage as any)?.coverImage || null);
 
     // Fetch full page data with blocks
     const { data: pageData, isLoading, refetch } = trpc.page.getById.useQuery(
@@ -87,10 +91,11 @@ export function PageEditor() {
         }
     };
 
-    // Update title and background when page changes
+    // Update title, background, and cover when page changes
     useEffect(() => {
         setTitle(currentPage?.title || '');
         setPageBackground((pageData as any)?.background || '');
+        setPageCover((pageData as any)?.coverImage || null);
         setIsEditMode(false); // Reset to read mode when page changes
     }, [currentPage?.id, currentPage?.title, pageData]);
 
@@ -228,6 +233,39 @@ export function PageEditor() {
 
     return (
         <div className={cn("min-h-full", pageBackground || "bg-white dark:bg-gray-900")}>
+            {/* Cover Image */}
+            {pageCover && (
+                <div className="page-cover group relative">
+                    <div
+                        className="page-cover-inner"
+                        style={{
+                            background: pageCover.startsWith('http') ? `url(${pageCover}) center/cover` : pageCover
+                        }}
+                    />
+                    {isEditMode && (
+                        <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                            <button
+                                onClick={() => setShowCoverPicker(true)}
+                                className="px-3 py-1.5 bg-white/90 dark:bg-gray-800/90 rounded-lg text-sm font-medium hover:bg-white dark:hover:bg-gray-800 transition-colors"
+                            >
+                                Change cover
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setPageCover(null);
+                                    if (currentPage) {
+                                        updatePageMutation.mutate({ id: currentPage.id, coverImage: undefined });
+                                    }
+                                }}
+                                className="p-1.5 bg-white/90 dark:bg-gray-800/90 rounded-lg hover:bg-white dark:hover:bg-gray-800 transition-colors"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+
             <div className="max-w-4xl mx-auto py-8">
                 {/* Page header */}
                 <div className="px-16 mb-8">
@@ -302,9 +340,12 @@ export function PageEditor() {
                             <span className="p-2 text-2xl">{currentPage.icon || '📄'}</span>
                         )}
 
-                        {/* Cover button - only in edit mode */}
-                        {isEditMode && (
-                            <button className="flex items-center gap-1 px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+                        {/* Cover button - only in edit mode and when no cover */}
+                        {isEditMode && !pageCover && (
+                            <button
+                                onClick={() => setShowCoverPicker(true)}
+                                className="flex items-center gap-1 px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                            >
                                 <ImageIcon className="w-4 h-4" />
                                 Add cover
                             </button>
@@ -430,6 +471,20 @@ export function PageEditor() {
                     // Save to database
                     if (currentPage) {
                         updatePageMutation.mutate({ id: currentPage.id, background: bg || null });
+                    }
+                }}
+            />
+
+            {/* Cover Picker Modal */}
+            <CoverPicker
+                isOpen={showCoverPicker}
+                onClose={() => setShowCoverPicker(false)}
+                currentCover={pageCover}
+                onSelect={(cover) => {
+                    setPageCover(cover);
+                    // Save to database
+                    if (currentPage) {
+                        updatePageMutation.mutate({ id: currentPage.id, coverImage: cover ?? undefined });
                     }
                 }}
             />
