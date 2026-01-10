@@ -74,7 +74,7 @@ export function DatabaseView({ databaseId, workspaceId }: DatabaseViewProps) {
     }
 
     return (
-        <div className="border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden my-6 bg-white dark:bg-gray-900 shadow-sm transition-all hover:shadow-md">
+        <div className="border border-gray-200 dark:border-gray-800 rounded-lg my-6 bg-white dark:bg-gray-900 shadow-sm transition-all hover:shadow-md">
             {/* Database Header */}
             <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/50">
                 <div className="flex items-center gap-2 group">
