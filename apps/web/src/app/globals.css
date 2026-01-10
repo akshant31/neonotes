@@ -2,10 +2,64 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Display Density Variables */
+:root {
+  /* Default density */
+  --density-font-xs: 0.75rem;
+  --density-font-sm: 0.875rem;
+  --density-font-base: 1rem;
+  --density-font-lg: 1.125rem;
+  --density-font-xl: 1.25rem;
+  --density-font-2xl: 1.5rem;
+  --density-font-3xl: 1.875rem;
+  --density-spacing-xs: 0.25rem;
+  --density-spacing-sm: 0.5rem;
+  --density-spacing-md: 0.75rem;
+  --density-spacing-lg: 1rem;
+  --density-line-height: 1.5;
+  --density-sidebar-item: 2rem;
+}
+
+/* Compact density - smaller fonts and tighter spacing */
+.density-compact {
+  --density-font-xs: 0.625rem;
+  --density-font-sm: 0.75rem;
+  --density-font-base: 0.875rem;
+  --density-font-lg: 1rem;
+  --density-font-xl: 1.125rem;
+  --density-font-2xl: 1.25rem;
+  --density-font-3xl: 1.5rem;
+  --density-spacing-xs: 0.125rem;
+  --density-spacing-sm: 0.25rem;
+  --density-spacing-md: 0.5rem;
+  --density-spacing-lg: 0.75rem;
+  --density-line-height: 1.4;
+  --density-sidebar-item: 1.75rem;
+}
+
+/* Comfortable density - larger fonts and more spacing */
+.density-comfortable {
+  --density-font-xs: 0.875rem;
+  --density-font-sm: 1rem;
+  --density-font-base: 1.125rem;
+  --density-font-lg: 1.25rem;
+  --density-font-xl: 1.5rem;
+  --density-font-2xl: 1.75rem;
+  --density-font-3xl: 2.25rem;
+  --density-spacing-xs: 0.375rem;
+  --density-spacing-sm: 0.625rem;
+  --density-spacing-md: 1rem;
+  --density-spacing-lg: 1.25rem;
+  --density-line-height: 1.6;
+  --density-sidebar-item: 2.5rem;
+}
+
 /* TipTap editor styles */
 .ProseMirror {
   outline: none;
   min-height: 200px;
+  font-size: var(--density-font-base);
+  line-height: var(--density-line-height);
 }
 
 .ProseMirror p.is-editor-empty:first-child::before {
@@ -18,26 +72,26 @@
 
 /* Heading styles */
 .ProseMirror h1 {
-  font-size: 2.25rem;
+  font-size: var(--density-font-3xl);
   font-weight: 700;
   line-height: 1.2;
-  margin: 1.5rem 0 1rem 0;
+  margin: var(--density-spacing-lg) 0 var(--density-spacing-md) 0;
   color: inherit;
 }
 
 .ProseMirror h2 {
-  font-size: 1.75rem;
+  font-size: var(--density-font-2xl);
   font-weight: 600;
   line-height: 1.3;
-  margin: 1.25rem 0 0.75rem 0;
+  margin: var(--density-spacing-md) 0 var(--density-spacing-sm) 0;
   color: inherit;
 }
 
 .ProseMirror h3 {
-  font-size: 1.375rem;
+  font-size: var(--density-font-xl);
   font-weight: 600;
   line-height: 1.4;
-  margin: 1rem 0 0.5rem 0;
+  margin: var(--density-spacing-md) 0 var(--density-spacing-xs) 0;
   color: inherit;
 }
 

@@ -20,7 +20,7 @@ const ThemeContext = createContext<{
 });
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
-    const { theme, setTheme } = useAppStore();
+    const { theme, setTheme, displayDensity } = useAppStore();
     const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('dark');
     const [mounted, setMounted] = useState(false);
 
@@ -48,6 +48,14 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         root.classList.remove('light', 'dark');
         root.classList.add(resolved);
 
+        // Apply density class
+        root.classList.remove('density-compact', 'density-comfortable');
+        if (displayDensity === 'compact') {
+            root.classList.add('density-compact');
+        } else if (displayDensity === 'comfortable') {
+            root.classList.add('density-comfortable');
+        }
+
         // Update body classes for color scheme
         document.body.classList.remove('bg-gray-950', 'bg-white', 'text-gray-100', 'text-gray-900');
         if (resolved === 'dark') {
@@ -69,7 +77,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
         mediaQuery.addEventListener('change', handleChange);
         return () => mediaQuery.removeEventListener('change', handleChange);
-    }, [theme, mounted]);
+    }, [theme, displayDensity, mounted]);
 
     return (
         <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>

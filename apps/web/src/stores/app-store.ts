@@ -27,6 +27,10 @@ interface AppState {
     theme: 'light' | 'dark' | 'system';
     setTheme: (theme: 'light' | 'dark' | 'system') => void;
 
+    // Display density
+    displayDensity: 'compact' | 'default' | 'comfortable';
+    setDisplayDensity: (density: 'compact' | 'default' | 'comfortable') => void;
+
     // Search
     isSearchOpen: boolean;
     setSearchOpen: (open: boolean) => void;
@@ -69,6 +73,10 @@ export const useAppStore = create<AppState>()(
             theme: 'system',
             setTheme: (theme) => set({ theme }),
 
+            // Display density
+            displayDensity: 'default',
+            setDisplayDensity: (density) => set({ displayDensity: density }),
+
             // Search
             isSearchOpen: false,
             setSearchOpen: (open) => set({ isSearchOpen: open }),
@@ -80,6 +88,7 @@ export const useAppStore = create<AppState>()(
             partialize: (state) => ({
                 theme: state.theme,
                 isSidebarOpen: state.isSidebarOpen,
+                displayDensity: state.displayDensity,
             }),
         }
     )
