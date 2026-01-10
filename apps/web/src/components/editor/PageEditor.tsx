@@ -231,8 +231,18 @@ export function PageEditor() {
         );
     }
 
+    // Check if background is a URL (uploaded image) or a CSS class
+    const isImageBackground = pageBackground?.startsWith('url(');
+    const backgroundStyle = isImageBackground
+        ? { backgroundImage: pageBackground, backgroundSize: 'cover', backgroundPosition: 'center' }
+        : undefined;
+    const backgroundClass = isImageBackground ? '' : (pageBackground || 'bg-white dark:bg-gray-900');
+
     return (
-        <div className={cn("min-h-full", pageBackground || "bg-white dark:bg-gray-900")}>
+        <div
+            className={cn("min-h-full", backgroundClass)}
+            style={backgroundStyle}
+        >
             {/* Cover Image */}
             {pageCover && (
                 <div className="page-cover group relative">
