@@ -201,11 +201,15 @@ export const pageRouter = createTRPCRouter({
                 },
             });
 
-            // Get all categories with page counts
+            // Get all categories with page counts (excluding archived)
             const categories = await ctx.prisma.category.findMany({
                 where: { workspaceId: input.workspaceId },
                 include: {
-                    _count: { select: { pages: true } },
+                    _count: {
+                        select: {
+                            pages: { where: { isArchived: false } }
+                        }
+                    },
                 },
             });
 

@@ -10,7 +10,11 @@ export const categoryRouter = createTRPCRouter({
                 where: { workspaceId: input.workspaceId },
                 orderBy: { name: 'asc' },
                 include: {
-                    _count: { select: { pages: true } },
+                    _count: {
+                        select: {
+                            pages: { where: { isArchived: false } }
+                        }
+                    },
                 },
             });
         }),
