@@ -1,14 +1,15 @@
 'use client';
 
-import { useState } from 'react';
-import { X, Image as ImageIcon, Link, Check, Sparkles } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { X, Image as ImageIcon, Link, Check, Sparkles, Upload, SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface CoverPickerProps {
     isOpen: boolean;
     onClose: () => void;
     currentCover?: string | null;
-    onSelect: (cover: string | null) => void;
+    currentOpacity?: number;
+    onSelect: (cover: string | null, opacity?: number) => void;
 }
 
 // Beautiful gradient covers
@@ -41,45 +42,60 @@ const SOLID_COVERS = [
     { id: 'solid-10', value: '#1f2937', label: 'Dark' },
 ];
 
-// Pattern covers (CSS patterns)
-const PATTERN_COVERS = [
-    {
-        id: 'pattern-1',
-        value: 'linear-gradient(135deg, #667eea 25%, transparent 25%), linear-gradient(225deg, #667eea 25%, transparent 25%), linear-gradient(45deg, #667eea 25%, transparent 25%), linear-gradient(315deg, #667eea 25%, #764ba2 25%)',
-        label: 'Diamonds',
-        bgSize: '20px 20px'
-    },
-    {
-        id: 'pattern-2',
-        value: 'radial-gradient(circle, #667eea 1px, transparent 1px)',
-        label: 'Dots',
-        bgSize: '20px 20px',
-        bgColor: '#764ba2'
-    },
-    {
-        id: 'pattern-3',
-        value: 'repeating-linear-gradient(45deg, #667eea, #667eea 10px, #764ba2 10px, #764ba2 20px)',
-        label: 'Stripes'
-    },
-];
-
-export function CoverPicker({ isOpen, onClose, currentCover, onSelect }: CoverPickerProps) {
-    const [activeTab, setActiveTab] = useState<'gradient' | 'solid' | 'link'>('gradient');
+export function CoverPicker({ isOpen, onClose, currentCover, currentOpacity = 100, onSelect }: CoverPickerProps) {
+    const [activeTab, setActiveTab] = useState<'gradient' | 'solid' | 'upload' | 'link'>('gradient');
     const [customUrl, setCustomUrl] = useState('');
+    const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+    const [opacity, setOpacity] = useState(currentOpacity);
+    const [previewCover, setPreviewCover] = useState<string | null>(currentCover || null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     if (!isOpen) return null;
 
     const handleSelect = (value: string | null) => {
-        onSelect(value);
+        onSelect(value, opacity);
         onClose();
     };
 
     const handleCustomUrl = () => {
         if (customUrl.trim()) {
-            onSelect(customUrl.trim());
+            onSelect(customUrl.trim(), opacity);
             onClose();
         }
     };
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            // Check file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Image size must be less than 5MB');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const dataUrl = event.target?.result as string;
+                setUploadedImage(dataUrl);
+                setPreviewCover(dataUrl);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleApplyUpload = () => {
+        if (uploadedImage) {
+            onSelect(uploadedImage, opacity);
+            onClose();
+        }
+    };
+
+    const tabs = [
+        { id: 'gradient', label: 'Gradients', icon: Sparkles },
+        { id: 'solid', label: 'Colors', icon: null, customIcon: true },
+        { id: 'upload', label: 'Upload', icon: Upload },
+        { id: 'link', label: 'Link', icon: Link },
+    ];
 
     return (
         <div
@@ -87,7 +103,7 @@ export function CoverPicker({ isOpen, onClose, currentCover, onSelect }: CoverPi
             onClick={onClose}
         >
             <div
-                className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-[480px] max-h-[80vh] overflow-hidden animate-slide-up"
+                className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-[520px] max-h-[85vh] overflow-hidden animate-slide-up"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
@@ -113,52 +129,69 @@ export function CoverPicker({ isOpen, onClose, currentCover, onSelect }: CoverPi
 
                 {/* Tabs */}
                 <div className="flex border-b border-gray-200 dark:border-gray-700">
-                    <button
-                        onClick={() => setActiveTab('gradient')}
-                        className={cn(
-                            "flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors",
-                            activeTab === 'gradient'
-                                ? "border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400"
-                                : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                        )}
-                    >
-                        <Sparkles className="w-4 h-4" />
-                        Gradients
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('solid')}
-                        className={cn(
-                            "flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors",
-                            activeTab === 'solid'
-                                ? "border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400"
-                                : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                        )}
-                    >
-                        <div className="w-4 h-4 rounded-full bg-gradient-to-r from-red-500 via-green-500 to-blue-500" />
-                        Colors
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('link')}
-                        className={cn(
-                            "flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors",
-                            activeTab === 'link'
-                                ? "border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400"
-                                : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                        )}
-                    >
-                        <Link className="w-4 h-4" />
-                        Link
-                    </button>
+                    {tabs.map((tab) => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id as any)}
+                            className={cn(
+                                "flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors",
+                                activeTab === tab.id
+                                    ? "border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400"
+                                    : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                            )}
+                        >
+                            {tab.customIcon ? (
+                                <div className="w-4 h-4 rounded-full bg-gradient-to-r from-red-500 via-green-500 to-blue-500" />
+                            ) : tab.icon && (
+                                <tab.icon className="w-4 h-4" />
+                            )}
+                            {tab.label}
+                        </button>
+                    ))}
                 </div>
 
+                {/* Opacity Slider - Always visible when there's a cover */}
+                {(currentCover || previewCover || uploadedImage) && (
+                    <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                        <div className="flex items-center gap-3">
+                            <SlidersHorizontal className="w-4 h-4 text-gray-400" />
+                            <span className="text-sm text-gray-600 dark:text-gray-400 min-w-[60px]">Opacity</span>
+                            <input
+                                type="range"
+                                min="10"
+                                max="100"
+                                value={opacity}
+                                onChange={(e) => setOpacity(parseInt(e.target.value))}
+                                className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                            />
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[40px] text-right">
+                                {opacity}%
+                            </span>
+                        </div>
+                        {/* Preview with opacity */}
+                        <div
+                            className="mt-3 h-16 rounded-lg overflow-hidden"
+                            style={{
+                                background: previewCover?.startsWith('data:') || previewCover?.startsWith('http')
+                                    ? `url(${previewCover}) center/cover`
+                                    : previewCover || currentCover || '#e5e7eb',
+                                opacity: opacity / 100
+                            }}
+                        />
+                    </div>
+                )}
+
                 {/* Content */}
-                <div className="p-4 max-h-[50vh] overflow-y-auto">
+                <div className="p-4 max-h-[45vh] overflow-y-auto">
                     {activeTab === 'gradient' && (
                         <div className="grid grid-cols-3 gap-3">
                             {GRADIENT_COVERS.map((cover) => (
                                 <button
                                     key={cover.id}
-                                    onClick={() => handleSelect(cover.value)}
+                                    onClick={() => {
+                                        setPreviewCover(cover.value);
+                                        handleSelect(cover.value);
+                                    }}
                                     className={cn(
                                         "aspect-video rounded-lg border-2 transition-all relative overflow-hidden group",
                                         currentCover === cover.value
@@ -186,7 +219,10 @@ export function CoverPicker({ isOpen, onClose, currentCover, onSelect }: CoverPi
                             {SOLID_COVERS.map((cover) => (
                                 <button
                                     key={cover.id}
-                                    onClick={() => handleSelect(cover.value)}
+                                    onClick={() => {
+                                        setPreviewCover(cover.value);
+                                        handleSelect(cover.value);
+                                    }}
                                     className={cn(
                                         "aspect-square rounded-lg border-2 transition-all relative",
                                         currentCover === cover.value
@@ -204,6 +240,69 @@ export function CoverPicker({ isOpen, onClose, currentCover, onSelect }: CoverPi
                         </div>
                     )}
 
+                    {activeTab === 'upload' && (
+                        <div className="space-y-4">
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleFileUpload}
+                                accept="image/*"
+                                className="hidden"
+                            />
+
+                            {!uploadedImage ? (
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="w-full aspect-video border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex flex-col items-center justify-center gap-3 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors cursor-pointer"
+                                >
+                                    <Upload className="w-10 h-10 text-gray-400" />
+                                    <div className="text-center">
+                                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                            Click to upload an image
+                                        </p>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            PNG, JPG, GIF up to 5MB
+                                        </p>
+                                    </div>
+                                </button>
+                            ) : (
+                                <div className="space-y-3">
+                                    <div
+                                        className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800"
+                                        style={{ opacity: opacity / 100 }}
+                                    >
+                                        <img
+                                            src={uploadedImage}
+                                            alt="Uploaded preview"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => {
+                                                setUploadedImage(null);
+                                                setPreviewCover(null);
+                                            }}
+                                            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                        >
+                                            Change Image
+                                        </button>
+                                        <button
+                                            onClick={handleApplyUpload}
+                                            className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
+                                        >
+                                            Apply Cover
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                                Images are stored locally in the page data
+                            </p>
+                        </div>
+                    )}
+
                     {activeTab === 'link' && (
                         <div className="space-y-4">
                             <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -213,7 +312,10 @@ export function CoverPicker({ isOpen, onClose, currentCover, onSelect }: CoverPi
                                 <input
                                     type="url"
                                     value={customUrl}
-                                    onChange={(e) => setCustomUrl(e.target.value)}
+                                    onChange={(e) => {
+                                        setCustomUrl(e.target.value);
+                                        if (e.target.value) setPreviewCover(e.target.value);
+                                    }}
                                     placeholder="https://example.com/image.jpg"
                                     className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                 />
@@ -226,7 +328,10 @@ export function CoverPicker({ isOpen, onClose, currentCover, onSelect }: CoverPi
                                 </button>
                             </div>
                             {customUrl && (
-                                <div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                                <div
+                                    className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800"
+                                    style={{ opacity: opacity / 100 }}
+                                >
                                     <img
                                         src={customUrl}
                                         alt="Preview"

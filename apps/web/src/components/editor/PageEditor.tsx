@@ -239,7 +239,9 @@ export function PageEditor() {
                     <div
                         className="page-cover-inner"
                         style={{
-                            background: pageCover.startsWith('http') ? `url(${pageCover}) center/cover` : pageCover
+                            background: pageCover.startsWith('data:') || pageCover.startsWith('http')
+                                ? `url(${pageCover}) center/cover no-repeat`
+                                : pageCover
                         }}
                     />
                     {isEditMode && (
@@ -466,7 +468,7 @@ export function PageEditor() {
                 isOpen={showBackgroundPicker}
                 onClose={() => setShowBackgroundPicker(false)}
                 currentBackground={pageBackground}
-                onSelect={(bg) => {
+                onSelect={(bg, _opacity) => {
                     setPageBackground(bg);
                     // Save to database
                     if (currentPage) {
@@ -480,7 +482,7 @@ export function PageEditor() {
                 isOpen={showCoverPicker}
                 onClose={() => setShowCoverPicker(false)}
                 currentCover={pageCover}
-                onSelect={(cover) => {
+                onSelect={(cover, _opacity) => {
                     setPageCover(cover);
                     // Save to database
                     if (currentPage) {
