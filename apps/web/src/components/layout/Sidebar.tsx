@@ -210,12 +210,15 @@ export function Sidebar() {
         <aside className="w-64 h-screen flex flex-col bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700">
             {/* Header */}
             <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-2">
+                <button
+                    onClick={() => setCurrentPage(null)}
+                    className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
+                >
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
                         <span className="text-white font-bold text-sm">N</span>
                     </div>
                     <span className="font-semibold text-gray-800 dark:text-gray-200">NeoNotes</span>
-                </div>
+                </button>
                 <button
                     onClick={toggleSidebar}
                     className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
