@@ -41,7 +41,9 @@ export function PageEditor() {
     const [showBackgroundPicker, setShowBackgroundPicker] = useState(false);
     const [showCoverPicker, setShowCoverPicker] = useState(false);
     const [pageBackground, setPageBackground] = useState<string>((currentPage as any)?.background || '');
+    const [backgroundOpacity, setBackgroundOpacity] = useState<number>(100);
     const [pageCover, setPageCover] = useState<string | null>((currentPage as any)?.coverImage || null);
+    const [coverOpacity, setCoverOpacity] = useState<number>(100);
 
     // Fetch full page data with blocks
     const { data: pageData, isLoading, refetch } = trpc.page.getById.useQuery(
@@ -234,7 +236,12 @@ export function PageEditor() {
     // Check if background is a URL (uploaded image) or a CSS class
     const isImageBackground = pageBackground?.startsWith('url(');
     const backgroundStyle = isImageBackground
-        ? { backgroundImage: pageBackground, backgroundSize: 'cover', backgroundPosition: 'center' }
+        ? {
+            backgroundImage: pageBackground,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            opacity: backgroundOpacity / 100
+        }
         : undefined;
     const backgroundClass = isImageBackground ? '' : (pageBackground || 'bg-white dark:bg-gray-900');
 
@@ -251,7 +258,8 @@ export function PageEditor() {
                         style={{
                             background: pageCover.startsWith('data:') || pageCover.startsWith('http')
                                 ? `url(${pageCover}) center/cover no-repeat`
-                                : pageCover
+                                : pageCover,
+                            opacity: coverOpacity / 100
                         }}
                     />
                     {isEditMode && (
@@ -478,8 +486,10 @@ export function PageEditor() {
                 isOpen={showBackgroundPicker}
                 onClose={() => setShowBackgroundPicker(false)}
                 currentBackground={pageBackground}
-                onSelect={(bg, _opacity) => {
+                currentOpacity={backgroundOpacity}
+                onSelect={(bg, opacity) => {
                     setPageBackground(bg);
+                    if (opacity !== undefined) setBackgroundOpacity(opacity);
                     // Save to database
                     if (currentPage) {
                         updatePageMutation.mutate({ id: currentPage.id, background: bg || null });
@@ -492,8 +502,10 @@ export function PageEditor() {
                 isOpen={showCoverPicker}
                 onClose={() => setShowCoverPicker(false)}
                 currentCover={pageCover}
-                onSelect={(cover, _opacity) => {
+                currentOpacity={coverOpacity}
+                onSelect={(cover, opacity) => {
                     setPageCover(cover);
+                    if (opacity !== undefined) setCoverOpacity(opacity);
                     // Save to database
                     if (currentPage) {
                         updatePageMutation.mutate({ id: currentPage.id, coverImage: cover ?? undefined });
