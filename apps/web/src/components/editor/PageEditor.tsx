@@ -93,11 +93,13 @@ export function PageEditor() {
         }
     };
 
-    // Update title, background, and cover when page changes
+    // Update title, background, cover and opacity when page changes
     useEffect(() => {
         setTitle(currentPage?.title || '');
         setPageBackground((pageData as any)?.background || '');
+        setBackgroundOpacity((pageData as any)?.backgroundOpacity ?? 100);
         setPageCover((pageData as any)?.coverImage || null);
+        setCoverOpacity((pageData as any)?.coverOpacity ?? 100);
         setIsEditMode(false); // Reset to read mode when page changes
     }, [currentPage?.id, currentPage?.title, pageData]);
 
@@ -235,283 +237,297 @@ export function PageEditor() {
 
     // Check if background is a URL (uploaded image) or a CSS class
     const isImageBackground = pageBackground?.startsWith('url(');
-    const backgroundStyle = isImageBackground
-        ? {
-            backgroundImage: pageBackground,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            opacity: backgroundOpacity / 100
-        }
-        : undefined;
-    const backgroundClass = isImageBackground ? '' : (pageBackground || 'bg-white dark:bg-gray-900');
 
     return (
-        <div
-            className={cn("min-h-full", backgroundClass)}
-            style={backgroundStyle}
-        >
-            {/* Cover Image */}
-            {pageCover && (
-                <div className="page-cover group relative">
-                    <div
-                        className="page-cover-inner"
-                        style={{
-                            background: pageCover.startsWith('data:') || pageCover.startsWith('http')
-                                ? `url(${pageCover}) center/cover no-repeat`
-                                : pageCover,
-                            opacity: coverOpacity / 100
-                        }}
-                    />
-                    {isEditMode && (
-                        <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
-                            <button
-                                onClick={() => setShowCoverPicker(true)}
-                                className="px-3 py-1.5 bg-white/90 dark:bg-gray-800/90 rounded-lg text-sm font-medium hover:bg-white dark:hover:bg-gray-800 transition-colors"
-                            >
-                                Change cover
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setPageCover(null);
-                                    if (currentPage) {
-                                        updatePageMutation.mutate({ id: currentPage.id, coverImage: undefined });
-                                    }
-                                }}
-                                className="p-1.5 bg-white/90 dark:bg-gray-800/90 rounded-lg hover:bg-white dark:hover:bg-gray-800 transition-colors"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
-                    )}
-                </div>
-            )}
+        <div className="min-h-full relative">
+            {/* Background layer - only this gets opacity */}
+            {isImageBackground ? (
+                <div
+                    className="absolute inset-0 z-0"
+                    style={{
+                        backgroundImage: pageBackground,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        opacity: backgroundOpacity / 100
+                    }}
+                />
+            ) : null}
 
-            <div className="max-w-4xl mx-auto py-8">
-                {/* Page header */}
-                <div className="px-16 mb-8">
-                    {/* Edit mode bar - only shown when editing */}
-                    {isEditMode && (
-                        <div className="flex items-center justify-between mb-4 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                            <div className="flex items-center gap-2">
-                                <Pencil className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Editing mode</span>
+            {/* Content wrapper */}
+            <div className={cn("min-h-full relative z-10", isImageBackground ? '' : (pageBackground || 'bg-white dark:bg-gray-900'))}>
+                {/* Cover Image */}
+                {pageCover && (
+                    <div className="page-cover group relative">
+                        <div
+                            className="page-cover-inner"
+                            style={{
+                                background: pageCover.startsWith('data:') || pageCover.startsWith('http')
+                                    ? `url(${pageCover}) center/cover no-repeat`
+                                    : pageCover,
+                                opacity: coverOpacity / 100
+                            }}
+                        />
+                        {isEditMode && (
+                            <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                                <button
+                                    onClick={() => setShowCoverPicker(true)}
+                                    className="px-3 py-1.5 bg-white/90 dark:bg-gray-800/90 rounded-lg text-sm font-medium hover:bg-white dark:hover:bg-gray-800 transition-colors"
+                                >
+                                    Change cover
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setPageCover(null);
+                                        if (currentPage) {
+                                            updatePageMutation.mutate({ id: currentPage.id, coverImage: undefined });
+                                        }
+                                    }}
+                                    className="p-1.5 bg-white/90 dark:bg-gray-800/90 rounded-lg hover:bg-white dark:hover:bg-gray-800 transition-colors"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
                             </div>
-                            <div className="flex items-center gap-3">
-                                {/* Save status */}
-                                <div className="text-sm text-gray-500">
-                                    {isSaving ? (
-                                        <span className="flex items-center gap-1">
-                                            <Loader2 className="w-3 h-3 animate-spin" />
-                                            Saving...
-                                        </span>
-                                    ) : (
-                                        formatLastSaved()
+                        )}
+                    </div>
+                )}
+
+                <div className="max-w-4xl mx-auto py-8">
+                    {/* Page header */}
+                    <div className="px-16 mb-8">
+                        {/* Edit mode bar - only shown when editing */}
+                        {isEditMode && (
+                            <div className="flex items-center justify-between mb-4 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                <div className="flex items-center gap-2">
+                                    <Pencil className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Editing mode</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    {/* Save status */}
+                                    <div className="text-sm text-gray-500">
+                                        {isSaving ? (
+                                            <span className="flex items-center gap-1">
+                                                <Loader2 className="w-3 h-3 animate-spin" />
+                                                Saving...
+                                            </span>
+                                        ) : (
+                                            formatLastSaved()
+                                        )}
+                                    </div>
+                                    {/* Manual save button */}
+                                    <button
+                                        onClick={handleManualSave}
+                                        disabled={isSaving}
+                                        className="flex items-center gap-1 px-2 py-1 text-sm text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-800/30 rounded transition-colors disabled:opacity-50"
+                                    >
+                                        <Save className="w-4 h-4" />
+                                        Save
+                                    </button>
+                                    {/* Done button */}
+                                    <button
+                                        onClick={() => setIsEditMode(false)}
+                                        className="flex items-center gap-1 px-3 py-1 text-sm bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors"
+                                    >
+                                        <Check className="w-4 h-4" />
+                                        Done
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="flex items-center gap-2 mb-4">
+                            {/* Icon picker - only in edit mode */}
+                            {isEditMode && (
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                                        className="p-2 text-2xl hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                                    >
+                                        {currentPage.icon || '📄'}
+                                    </button>
+                                    {showEmojiPicker && (
+                                        <div className="absolute top-full left-0 mt-1 p-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-20 grid grid-cols-5 gap-1">
+                                            {EMOJIS.map((emoji) => (
+                                                <button
+                                                    key={emoji}
+                                                    onClick={() => handleIconChange(emoji)}
+                                                    className="p-2 text-xl hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                                                >
+                                                    {emoji}
+                                                </button>
+                                            ))}
+                                        </div>
                                     )}
                                 </div>
-                                {/* Manual save button */}
-                                <button
-                                    onClick={handleManualSave}
-                                    disabled={isSaving}
-                                    className="flex items-center gap-1 px-2 py-1 text-sm text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-800/30 rounded transition-colors disabled:opacity-50"
-                                >
-                                    <Save className="w-4 h-4" />
-                                    Save
-                                </button>
-                                {/* Done button */}
-                                <button
-                                    onClick={() => setIsEditMode(false)}
-                                    className="flex items-center gap-1 px-3 py-1 text-sm bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors"
-                                >
-                                    <Check className="w-4 h-4" />
-                                    Done
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                            )}
 
-                    <div className="flex items-center gap-2 mb-4">
-                        {/* Icon picker - only in edit mode */}
-                        {isEditMode && (
-                            <div className="relative">
+                            {/* Read-only icon display */}
+                            {!isEditMode && (
+                                <span className="p-2 text-2xl">{currentPage.icon || '📄'}</span>
+                            )}
+
+                            {/* Cover button - only in edit mode and when no cover */}
+                            {isEditMode && !pageCover && (
                                 <button
-                                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                                    className="p-2 text-2xl hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                                    onClick={() => setShowCoverPicker(true)}
+                                    className="flex items-center gap-1 px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
                                 >
-                                    {currentPage.icon || '📄'}
+                                    <ImageIcon className="w-4 h-4" />
+                                    Add cover
                                 </button>
-                                {showEmojiPicker && (
-                                    <div className="absolute top-full left-0 mt-1 p-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-20 grid grid-cols-5 gap-1">
-                                        {EMOJIS.map((emoji) => (
+                            )}
+
+                            {/* Background button - only in edit mode */}
+                            {isEditMode && (
+                                <button
+                                    onClick={() => setShowBackgroundPicker(true)}
+                                    className="flex items-center gap-1 px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                                >
+                                    <Palette className="w-4 h-4" />
+                                    Background
+                                </button>
+                            )}
+
+                            {/* Favorite button */}
+                            <button
+                                onClick={toggleFavorite}
+                                className={`flex items-center gap-1 px-2 py-1 text-sm rounded-lg transition-colors ${currentPage.isFavorite
+                                    ? 'text-yellow-500'
+                                    : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'
+                                    }`}
+                            >
+                                <Star className={`w-4 h-4 ${currentPage.isFavorite ? 'fill-yellow-500' : ''}`} />
+                            </button>
+
+                            {/* Category selector - only in edit mode */}
+                            {isEditMode && pageData && (
+                                <CategorySelector
+                                    pageId={currentPage.id}
+                                    currentCategoryId={(pageData as any).categoryId ?? null}
+                                    workspaceId={currentPage.workspaceId}
+                                />
+                            )}
+
+                            {/* More menu */}
+                            <div className="relative ml-auto">
+                                <button
+                                    onClick={() => setShowMenu(!showMenu)}
+                                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                                >
+                                    <MoreHorizontal className="w-4 h-4" />
+                                </button>
+                                {showMenu && (
+                                    <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-20">
+                                        {/* Edit option - only when not in edit mode */}
+                                        {!isEditMode && (
                                             <button
-                                                key={emoji}
-                                                onClick={() => handleIconChange(emoji)}
-                                                className="p-2 text-xl hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                                                onClick={() => {
+                                                    setIsEditMode(true);
+                                                    setShowMenu(false);
+                                                }}
+                                                className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
                                             >
-                                                {emoji}
+                                                <Pencil className="w-4 h-4" />
+                                                Edit page
                                             </button>
-                                        ))}
+                                        )}
+                                        <button className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700">
+                                            <Copy className="w-4 h-4" />
+                                            Duplicate
+                                        </button>
+                                        <button className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700">
+                                            <ExternalLink className="w-4 h-4" />
+                                            Open in new tab
+                                        </button>
+                                        <hr className="my-1 border-gray-200 dark:border-gray-700" />
+                                        <button
+                                            onClick={() => {
+                                                deletePageMutation.mutate({ id: currentPage.id });
+                                                setShowMenu(false);
+                                            }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                            Delete
+                                        </button>
                                     </div>
                                 )}
                             </div>
-                        )}
-
-                        {/* Read-only icon display */}
-                        {!isEditMode && (
-                            <span className="p-2 text-2xl">{currentPage.icon || '📄'}</span>
-                        )}
-
-                        {/* Cover button - only in edit mode and when no cover */}
-                        {isEditMode && !pageCover && (
-                            <button
-                                onClick={() => setShowCoverPicker(true)}
-                                className="flex items-center gap-1 px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                            >
-                                <ImageIcon className="w-4 h-4" />
-                                Add cover
-                            </button>
-                        )}
-
-                        {/* Background button - only in edit mode */}
-                        {isEditMode && (
-                            <button
-                                onClick={() => setShowBackgroundPicker(true)}
-                                className="flex items-center gap-1 px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
-                            >
-                                <Palette className="w-4 h-4" />
-                                Background
-                            </button>
-                        )}
-
-                        {/* Favorite button */}
-                        <button
-                            onClick={toggleFavorite}
-                            className={`flex items-center gap-1 px-2 py-1 text-sm rounded-lg transition-colors ${currentPage.isFavorite
-                                ? 'text-yellow-500'
-                                : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'
-                                }`}
-                        >
-                            <Star className={`w-4 h-4 ${currentPage.isFavorite ? 'fill-yellow-500' : ''}`} />
-                        </button>
-
-                        {/* Category selector - only in edit mode */}
-                        {isEditMode && pageData && (
-                            <CategorySelector
-                                pageId={currentPage.id}
-                                currentCategoryId={(pageData as any).categoryId ?? null}
-                                workspaceId={currentPage.workspaceId}
-                            />
-                        )}
-
-                        {/* More menu */}
-                        <div className="relative ml-auto">
-                            <button
-                                onClick={() => setShowMenu(!showMenu)}
-                                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
-                            >
-                                <MoreHorizontal className="w-4 h-4" />
-                            </button>
-                            {showMenu && (
-                                <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-20">
-                                    {/* Edit option - only when not in edit mode */}
-                                    {!isEditMode && (
-                                        <button
-                                            onClick={() => {
-                                                setIsEditMode(true);
-                                                setShowMenu(false);
-                                            }}
-                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
-                                        >
-                                            <Pencil className="w-4 h-4" />
-                                            Edit page
-                                        </button>
-                                    )}
-                                    <button className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700">
-                                        <Copy className="w-4 h-4" />
-                                        Duplicate
-                                    </button>
-                                    <button className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700">
-                                        <ExternalLink className="w-4 h-4" />
-                                        Open in new tab
-                                    </button>
-                                    <hr className="my-1 border-gray-200 dark:border-gray-700" />
-                                    <button
-                                        onClick={() => {
-                                            deletePageMutation.mutate({ id: currentPage.id });
-                                            setShowMenu(false);
-                                        }}
-                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                        Delete
-                                    </button>
-                                </div>
-                            )}
                         </div>
+
+                        {/* Title - editable only in edit mode */}
+                        {isEditMode ? (
+                            <input
+                                type="text"
+                                value={title}
+                                onChange={handleTitleChange}
+                                placeholder="Untitled"
+                                className="w-full text-4xl font-bold bg-transparent outline-none placeholder:text-gray-300 dark:placeholder:text-gray-600"
+                            />
+                        ) : (
+                            <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100">
+                                {title || 'Untitled'}
+                            </h1>
+                        )}
                     </div>
 
-                    {/* Title - editable only in edit mode */}
-                    {isEditMode ? (
-                        <input
-                            type="text"
-                            value={title}
-                            onChange={handleTitleChange}
-                            placeholder="Untitled"
-                            className="w-full text-4xl font-bold bg-transparent outline-none placeholder:text-gray-300 dark:placeholder:text-gray-600"
+                    {/* Editor */}
+                    <div className="px-12">
+                        <BlockEditor
+                            content={content}
+                            onChange={handleContentChange}
+                            placeholder="Type '/' for commands, or just start writing..."
+                            pageId={currentPage.id}
+                            workspaceId={currentPage.workspaceId}
+                            editable={isEditMode}
                         />
-                    ) : (
-                        <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100">
-                            {title || 'Untitled'}
-                        </h1>
-                    )}
+
+                        {/* Backlinks panel */}
+                        <BacklinksPanel pageId={currentPage.id} />
+                    </div>
                 </div>
 
-                {/* Editor */}
-                <div className="px-12">
-                    <BlockEditor
-                        content={content}
-                        onChange={handleContentChange}
-                        placeholder="Type '/' for commands, or just start writing..."
-                        pageId={currentPage.id}
-                        workspaceId={currentPage.workspaceId}
-                        editable={isEditMode}
-                    />
+                {/* Background Picker Modal */}
+                <PageBackgroundPicker
+                    isOpen={showBackgroundPicker}
+                    onClose={() => setShowBackgroundPicker(false)}
+                    currentBackground={pageBackground}
+                    currentOpacity={backgroundOpacity}
+                    onSelect={(bg, opacity) => {
+                        setPageBackground(bg);
+                        const newOpacity = opacity ?? 100;
+                        setBackgroundOpacity(newOpacity);
+                        // Save to database
+                        if (currentPage) {
+                            updatePageMutation.mutate({
+                                id: currentPage.id,
+                                background: bg || null,
+                                backgroundOpacity: newOpacity
+                            });
+                        }
+                    }}
+                />
 
-                    {/* Backlinks panel */}
-                    <BacklinksPanel pageId={currentPage.id} />
-                </div>
+                {/* Cover Picker Modal */}
+                <CoverPicker
+                    isOpen={showCoverPicker}
+                    onClose={() => setShowCoverPicker(false)}
+                    currentCover={pageCover}
+                    currentOpacity={coverOpacity}
+                    onSelect={(cover, opacity) => {
+                        setPageCover(cover);
+                        const newOpacity = opacity ?? 100;
+                        setCoverOpacity(newOpacity);
+                        // Save to database
+                        if (currentPage) {
+                            updatePageMutation.mutate({
+                                id: currentPage.id,
+                                coverImage: cover ?? undefined,
+                                coverOpacity: newOpacity
+                            });
+                        }
+                    }}
+                />
             </div>
-
-            {/* Background Picker Modal */}
-            <PageBackgroundPicker
-                isOpen={showBackgroundPicker}
-                onClose={() => setShowBackgroundPicker(false)}
-                currentBackground={pageBackground}
-                currentOpacity={backgroundOpacity}
-                onSelect={(bg, opacity) => {
-                    setPageBackground(bg);
-                    if (opacity !== undefined) setBackgroundOpacity(opacity);
-                    // Save to database
-                    if (currentPage) {
-                        updatePageMutation.mutate({ id: currentPage.id, background: bg || null });
-                    }
-                }}
-            />
-
-            {/* Cover Picker Modal */}
-            <CoverPicker
-                isOpen={showCoverPicker}
-                onClose={() => setShowCoverPicker(false)}
-                currentCover={pageCover}
-                currentOpacity={coverOpacity}
-                onSelect={(cover, opacity) => {
-                    setPageCover(cover);
-                    if (opacity !== undefined) setCoverOpacity(opacity);
-                    // Save to database
-                    if (currentPage) {
-                        updatePageMutation.mutate({ id: currentPage.id, coverImage: cover ?? undefined });
-                    }
-                }}
-            />
         </div>
     );
 }
